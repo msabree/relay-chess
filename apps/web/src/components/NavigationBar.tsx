@@ -12,6 +12,9 @@ import SignInModal from '@/modals/SignIn';
 import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 import { CLICKED_SIGN_IN } from '@/constants';
 
+// Sign-in is hidden until Google/Apple are set up again. Set NEXT_PUBLIC_ENABLE_SIGN_IN=true to show it.
+const SIGN_IN_ENABLED = process.env.NEXT_PUBLIC_ENABLE_SIGN_IN === 'true';
+
 /** One header for every page: brand, a few links, theme toggle, account. */
 const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: boolean }) => {
   const { setModal, setRightDrawerOpen } = useContext(AppContext);
@@ -63,7 +66,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: bo
                 </span>
                 <span className="hidden sm:inline max-w-[140px] truncate text-sm font-medium">{user.data?.username}</span>
               </button>
-            ) : (
+            ) : SIGN_IN_ENABLED ? (
               <button
                 type="button"
                 onClick={() => {
@@ -74,7 +77,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: bo
               >
                 Sign in
               </button>
-            )}
+            ) : null}
             <button
               type="button"
               className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-fg/5"

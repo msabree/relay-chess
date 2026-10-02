@@ -137,7 +137,7 @@ const LandingPage = () => {
         {/* Play */}
         <section id="play" className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pick how you want to play</h2>
-          <p className="mt-2 mb-8 text-fg-muted">Every option is free. Sign in only if you want your games on the leaderboard.</p>
+          <p className="mt-2 mb-8 text-fg-muted">Every option is free, and nobody needs an account.</p>
           <PlayOptions />
         </section>
 

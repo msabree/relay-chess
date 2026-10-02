@@ -13,7 +13,6 @@ export default function TermsOfService() {
         <title>{"Terms of Service - Relay Chess"}</title>
         <meta name="description" content={"Terms of Service for Relay Chess - Team Chess Reimagined. Read our terms and conditions for using our platform."} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <NavigationBar />
