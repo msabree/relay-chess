@@ -42,7 +42,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: bo
             </Link>
             <nav aria-label="Main" className="hidden md:flex items-center gap-1">
               {links.map((l) => (
-                <Link key={l.label} href={l.href} className={linkClass(l.href)}>
+                <Link key={l.label} href={l.href} className={linkClass(l.href)} aria-current={router.pathname === l.href ? "page" : undefined}>
                   {l.label}
                 </Link>
               ))}
