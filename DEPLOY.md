@@ -67,7 +67,6 @@ Deploys restart the server, which ends games in progress, so release production 
 
 ## If Render complains
 - `autoDeployTrigger` rejected: use `autoDeploy: true` (deploys on every push, without waiting for CI).
-- YAML anchors (`x-server`, `<<:`) rejected: copy the shared keys into both services.
 - `corepack enable` fails: build with `npm i -g pnpm@9.15.4 && pnpm install --frozen-lockfile --filter @relay-chess/server...`.
 
 Render sets `PORT`; the server reads it.
