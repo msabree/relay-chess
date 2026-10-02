@@ -2,13 +2,11 @@ import { ErrorInfo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { ChessGameProvider } from '@/contexts/ChessGame';
 import NavigationBar from '@/components/NavigationBar';
 import GameScreen from '@/components/game/GameScreen';
-import { useUser } from '@/hooks/useUser';
-import { BOARD_COLOR_SCHEMES } from '@/constants';
+import { useBoardColor } from '@/lib/settings';
 
 function GamesErrorFallback() {
   return (
@@ -28,10 +26,8 @@ function GamesErrorFallback() {
 }
 
 const Room = () => {
-  const { status } = useSession();
-  const user = useUser();
   const roomId = usePathname()?.split('games/')[1] ?? '';
-  const scheme = BOARD_COLOR_SCHEMES.find((s) => s.value === user.data?.boardColor);
+  const scheme = useBoardColor();
 
   return (
     <ErrorBoundary
@@ -43,9 +39,9 @@ const Room = () => {
         <meta name="robots" content="noindex" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <ChessGameProvider isLoggedIn={status === 'authenticated'} roomId={roomId}>
+      <ChessGameProvider roomId={roomId}>
         <NavigationBar compact />
-        <GameScreen lightColor={scheme?.light} darkColor={scheme?.dark} />
+        <GameScreen lightColor={scheme.light} darkColor={scheme.dark} />
       </ChessGameProvider>
     </ErrorBoundary>
   );

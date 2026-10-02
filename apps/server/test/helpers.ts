@@ -2,7 +2,6 @@ import type { AddressInfo } from 'node:net';
 import type { ClientToServerEvents, RoomSnapshot, ServerToClientEvents } from '@relay-chess/game';
 import { io as connect, type Socket } from 'socket.io-client';
 import { createServer } from '../src/app';
-import { signIdentityToken } from '../src/auth';
 import { loadConfig } from '../src/config';
 import { createMemoryStore } from '../src/store/memory';
 
@@ -24,12 +23,7 @@ export async function startServer(opts: { abandonMs?: number } = {}) {
     return { status: res.status, body: (await res.json()) as any };
   };
 
-  const guest = async () => (await api('/auth/guest', { method: 'POST' })).body as { token: string; user: { id: string; username: string } };
-  const account = async (email: string) =>
-    (await api('/auth/exchange', { method: 'POST', json: { token: signIdentityToken(SECRET, email) } })).body as {
-      token: string;
-      user: { id: string; username: string };
-    };
+  const guest = async () => (await api('/players', { method: 'POST' })).body as { token: string; user: { id: string; username: string } };
 
   const client = async (token: string): Promise<Client> => {
     const s: Client = connect(url, { auth: { token }, transports: ['websocket'], forceNew: true });
@@ -42,8 +36,8 @@ export async function startServer(opts: { abandonMs?: number } = {}) {
   };
 
   /** A connected player: token, user and socket. */
-  const player = async (kind: 'guest' | string = 'guest') => {
-    const auth = kind === 'guest' ? await guest() : await account(kind);
+  const player = async () => {
+    const auth = await guest();
     return { ...auth, socket: await client(auth.token) };
   };
 
@@ -53,7 +47,6 @@ export async function startServer(opts: { abandonMs?: number } = {}) {
     url,
     api,
     guest,
-    account,
     client,
     player,
     async stop() {

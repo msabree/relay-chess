@@ -1,8 +1,6 @@
 import { api } from './http';
 import { Analysis } from '@/types';
 
-export const getGames = (userId: string) => api.get(`/users/${encodeURIComponent(userId)}/games`);
-
 export const getGame = (roomId: string) => api.get(`/games/${encodeURIComponent(roomId)}`);
 
 export const saveAnalysis = (roomId: string, analysis: Analysis[]) =>

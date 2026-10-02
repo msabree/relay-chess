@@ -1,8 +1,6 @@
 import { useContext, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
 import ReactGA from 'react-ga4';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
@@ -34,14 +32,8 @@ const STEPS = [
 ];
 
 const LandingPage = () => {
-  const router = useRouter();
   const { setModal, modal } = useContext(AppContext);
-  const { data: session } = useSession();
   const { totalOnline } = useOnlineStats();
-
-  useEffect(() => {
-    if (session) router.replace('/home');
-  }, [session, router]);
 
   useEffect(() => {
     if (GOOGLE_ANALYTICS_ID) ReactGA.initialize(GOOGLE_ANALYTICS_ID, { testMode: ANALYTICS_TEST_MODE });

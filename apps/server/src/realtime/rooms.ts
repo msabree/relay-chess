@@ -355,8 +355,7 @@ export class RoomService {
     if (g.result?.reason === 'aborted' || g.moves.length === 0) return;
     try {
       await this.deps.store.saveGame(toGameRecord(g, new Date(this.now())));
-      const ranked = outcomes(g).filter((o) => !room.guests.has(o.userId) && !o.userId.startsWith('guest_'));
-      await recordOutcomes(this.deps.store, ranked, new Date(this.now()));
+      await recordOutcomes(this.deps.store, outcomes(g), new Date(this.now()));
     } catch (err) {
       this.log(`failed to save result for room ${room.id}`, err);
     }

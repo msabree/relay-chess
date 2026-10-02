@@ -1,5 +1,5 @@
 # Render Blueprint: the Relay Chess server (HTTP API + socket.io), staging and production.
-#   main -> relay-chess-server-stage (stage-api.relaychess.com)
+#   main -> relay-chess-server-stage (staging-api.relaychess.com)
 #   prod -> relay-chess-server       (api.relaychess.com)
 # The web app deploys on Vercel (see DEPLOY.md).
 # Both services deploy after a push to their branch, once GitHub checks (CI) pass.
@@ -26,16 +26,14 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: AUTH_SECRET # same value as Vercel's Preview AUTH_SECRET; different from prod
+      - key: AUTH_SECRET # openssl rand -base64 48; different from prod
         sync: false
       - key: MONGODB_URL
         sync: false
-      - key: DATABASE_NAME # a separate database, e.g. relaychess_stage
+      - key: DATABASE_NAME # your staging database (separate from prod)
         sync: false
       - key: CORS_ORIGINS
-        value: https://stage.relaychess.com
-      - key: GUEST_LOGIN
-        value: "true"
+        value: https://staging.relaychess.com
 
   - type: web
     name: relay-chess-server
@@ -57,13 +55,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: AUTH_SECRET # same value as Vercel's Production AUTH_SECRET
+      - key: AUTH_SECRET # openssl rand -base64 48
         sync: false
       - key: MONGODB_URL
         sync: false
-      - key: DATABASE_NAME # the existing database, so users and the leaderboard carry over
+      - key: DATABASE_NAME # your production database
         sync: false
       - key: CORS_ORIGINS
         value: https://relaychess.com,https://www.relaychess.com
-      - key: GUEST_LOGIN
-        value: "true"

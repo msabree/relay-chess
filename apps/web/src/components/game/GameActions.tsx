@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { ChessGameContext } from '@/contexts/ChessGame';
 import { resultText } from './util';
 
@@ -9,7 +8,6 @@ const btn = 'h-11 flex-1 rounded-lg border border-line text-sm font-medium hover
 /** Result card after the game; draw/resign/abort during it. */
 const GameActions = () => {
   const { game, room, teamColor, abortGame, resignGame, offerDraw, offerRematch, drawOfferedBy, roomId } = useContext(ChessGameContext);
-  const { status } = useSession();
   const [confirmResign, setConfirmResign] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -46,7 +44,7 @@ const GameActions = () => {
             </Link>
           )}
         </div>
-        <Link href={status === 'authenticated' ? '/home' : '/'} className="block text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
+        <Link href="/" className="block text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
           Back to the lobby
         </Link>
       </div>

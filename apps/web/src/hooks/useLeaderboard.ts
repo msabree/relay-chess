@@ -2,18 +2,18 @@ import { useQuery } from 'react-query';
 import { getLeaderboard, getUserPosition } from '../apis/games';
 import { APIError, Leaderboard, UserPosition } from '@/types';
 
-export const useLeaderboard = (page = 0, pageSize = 25, period: string = 'all-time') => {
+export const useLeaderboard = (page = 0, pageSize = 25, period: string = 'daily') => {
   return useQuery<Leaderboard, APIError>(['leaderboard', page, pageSize, period], () => {
     return getLeaderboard(page, pageSize, period).then((res) => {
-      return res.data ?? {rows: [], total: 0, page: 0, period} as Leaderboard;
+      return res.data ?? ({ rows: [], total: 0, page: 0, period, resetsAt: '' }) as unknown as Leaderboard;
     }).catch((err) => {
       console.log(err);
-      return {rows: [], total: 0, page: 0, period} as Leaderboard;
+      return ({ rows: [], total: 0, page: 0, period, resetsAt: '' }) as unknown as Leaderboard;
     });
   });
 };
 
-export const useUserPosition = (userId: string | undefined, period: string = 'all-time') => {
+export const useUserPosition = (userId: string | undefined, period: string = 'daily') => {
   return useQuery<UserPosition, APIError>(
     ['userPosition', userId, period],
     () => {

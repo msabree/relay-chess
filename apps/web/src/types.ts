@@ -34,19 +34,21 @@ export interface Spectator {
 export interface LeaderboardRow {
     _rank: number;
     _userId: string;
-    elo?: number;
+    userId: string;
+    username: string;
     wins: number;
     losses: number;
     draws: number;
-    currentStreak?: number;
-    highestStreak?: number;
+    gamesPlayed: number;
 }
 
 export interface Leaderboard {
     total: number;
     page: number;
     rows: LeaderboardRow[];
-    period?: string;
+    period: 'daily' | 'weekly';
+    /** ISO time when this board resets */
+    resetsAt: string;
 }
 
 export interface UserPosition {
@@ -77,8 +79,6 @@ export interface ChatMessage {
 export interface UserProfile {
     _id: string;
     username: string;
-    boardColor: string;
-    guest: boolean;
 }
 
 export interface GameMove {

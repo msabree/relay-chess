@@ -56,7 +56,7 @@ describe('private rooms', () => {
   });
 
   it('enforces the relay and legality on the server, then records the result', async () => {
-    const ps = await Promise.all(['a@x.com', 'b@x.com', 'c@x.com', 'd@x.com'].map((e) => t.player(e)));
+    const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     const room = await privateRoom(ps);
 
     const first = nextMover(room.game)!;
@@ -84,20 +84,28 @@ describe('private rooms', () => {
     expect(saved).toMatchObject({ result: 'checkmate', winningColor: 'black', reason: 'checkmate' });
     expect(saved!.gameHistory.map((m) => m.sanMove)).toEqual(['f3', 'e5', 'g4', 'Qh4#']);
 
-    const board = (await t.api('/leaderboard')).body;
-    expect(board.total).toBe(4);
     const winners = new Set(end.game.teams.b.map((p) => p.id));
-    for (const row of board.rows) expect(row.wins).toBe(winners.has(row.userId) ? 1 : 0);
-    expect((await t.api(`/users/${ps[0]!.user.id}/games`)).body.games).toHaveLength(1);
+    for (const period of ['daily', 'weekly']) {
+      const board = (await t.api(`/leaderboard?period=${period}`)).body;
+      expect(board.total).toBe(4);
+      expect(board.resetsAt).toBeTruthy();
+      for (const row of board.rows) expect(row.wins).toBe(winners.has(row.userId) ? 1 : 0);
+      expect(board.rows[0].username).toBeTruthy();
+    }
+    const pos = (await t.api(`/leaderboard/position?userId=${[...winners][0]}`)).body;
+    expect(pos.rank).toBeLessThanOrEqual(2);
   });
 
-  it('keeps guests off the leaderboard but still saves the game', async () => {
+  it('uses your current nickname on the leaderboard', async () => {
     const ps = await Promise.all([1, 2].map(() => t.player()));
-    const room = await privateRoom(ps);
-    const end = await play(ps, room.id, FOOLS_MATE);
+    const renamed = await t.api('/me', { method: 'PATCH', token: ps[0]!.token, json: { username: 'Queen Bee' } });
+    const s = await t.client(renamed.body.token);
+    const players = [{ ...ps[0]!, socket: s }, ps[1]!];
+    const room = await privateRoom(players);
+    const end = await play(players, room.id, FOOLS_MATE);
     await t.server.rooms.get(end.id)!.saved;
-    expect(await t.store.getGame(room.id)).not.toBeNull();
-    expect((await t.api('/leaderboard')).body.total).toBe(0);
+    const names = (await t.api('/leaderboard')).body.rows.map((r: { username: string }) => r.username);
+    expect(names).toContain('Queen Bee');
   });
 
   it('late joiners spectate; spectators can chat but not move', async () => {
