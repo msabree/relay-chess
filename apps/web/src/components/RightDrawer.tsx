@@ -1,5 +1,6 @@
 import { useContext } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { clearAuth } from '@/lib/auth';
 import { AppContext } from '@/contexts/App';
 import dynamic from 'next/dynamic';
 import { useUser } from '@/hooks/useUser';
@@ -88,7 +89,7 @@ const RightDrawer = () => {
                 <Select
                   value={boardColor}
                   onValueChange={(value) => {
-                    updateUser('boardColor', value, userQuery.data?._id ?? '').then(() => {
+                    updateUser('boardColor', value).then(() => {
                       userQuery.refetch();
                     });
                   }}
@@ -114,7 +115,7 @@ const RightDrawer = () => {
             {session && (
               <div className="pt-6 border-t border-white/10 mt-6">
                 <Button
-                  onClick={() => signOut()}
+                  onClick={() => { clearAuth(); signOut(); }}
                   variant="ghost"
                   className="w-full flex items-center justify-center gap-2.5 glass-effect border border-red-400/30 hover:border-red-400/50 hover:bg-red-400/10 text-red-400 hover:text-red-300 transition-all duration-200 py-3"
                 >

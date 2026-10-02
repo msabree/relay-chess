@@ -1,9 +1,7 @@
 import axios from 'axios';
-import { CHESS_SERVER_API } from '@/constants';
+import { api } from './http';
 
-export const searchUsernames = (query: string) => {
-  return axios.get(`${CHESS_SERVER_API}/users/search?q=${query}`);
-};
+export const searchUsernames = (query: string) => api.get('/users/search', { params: { q: query } });
 
 export const getLiChessRating = (username: string) => {
   return axios.get(`https://lichess.org/api/user/${username}`);

@@ -1,7 +1,6 @@
 import Head from 'next/head';
 import NavigationBar from '@/components/NavigationBar';
 import RightDrawer from '@/components/RightDrawer';
-import Notifications from '@/components/Notifications';
 import Leaderboard from '@/components/Leaderboard';
 import SignInModal from '@/modals/SignIn';
 import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
@@ -20,7 +19,6 @@ export default function LeaderboardPage() {
       <RightDrawer />
       <UpdateProfileInfo />
       <SignInModal />
-      <Notifications />
     </>
   );
 }

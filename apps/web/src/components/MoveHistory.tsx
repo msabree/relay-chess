@@ -2,7 +2,6 @@ import React, { useCallback, useContext, useEffect, useState, useMemo } from 're
 import { ScrollMenu, VisibilityContext } from 'react-horizontal-scrolling-menu';
 import { ChessGameContext } from '@/contexts/ChessGame';
 import dynamic from 'next/dynamic';
-import { useGame } from '@/hooks/useGame';
 import { Chess } from 'chess.js';
 
 const ChevronFirst = dynamic(() => import('lucide-react').then(mod => mod.ChevronFirst), { ssr: false });
@@ -47,11 +46,10 @@ export const getPiece = (piece: string, isCurrentMove: boolean) => {
 };
 
 const MoveHistory = ({roomId} : MoveHistoryProps) => {
+  // The live room keeps the full move list, before and after the game ends.
   const { gameHistory, setMoveHistoryFen, isGameOver } = useContext(ChessGameContext);
   const apiRef = React.useRef({} as scrollVisibilityApiType);
-  const gameQuery = useGame(roomId || '');
-  const afterGameHistory = useMemo(() => gameQuery.data?.gameHistory ?? [], [gameQuery.data?.gameHistory]);
-  const moves = useMemo(() => isGameOver ? afterGameHistory : (gameHistory ?? []), [isGameOver, afterGameHistory, gameHistory]);
+  const moves = useMemo(() => gameHistory ?? [], [gameHistory]);
   
   // Initialize with a safe value that works on both server and client
   const [currentMoveIndex, setCurrentMoveIndex] = useState(() => {

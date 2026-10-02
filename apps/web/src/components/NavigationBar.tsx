@@ -3,7 +3,6 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
-import { useNotifications } from '@/hooks/useNotifications';
 import { useUser } from '@/hooks/useUser';
 import LeftDrawer from './LeftDrawer';
 import LogoV1 from '@/icons/LogoV1';
@@ -11,7 +10,6 @@ import LogoSmallV1 from '@/icons/LogoSmallV1';
 import dynamic from 'next/dynamic';
 
 const Menu = dynamic(() => import('lucide-react').then(mod => mod.Menu), { ssr: false });
-const Bell = dynamic(() => import('lucide-react').then(mod => mod.Bell), { ssr: false });
 const Settings = dynamic(() => import('lucide-react').then(mod => mod.Settings), { ssr: false });
 import { Button } from '@/components/ui/button';
 import ReactGA from 'react-ga4';
@@ -26,7 +24,6 @@ const NavigationBar = ({
 }) => {
   const isLight = appearance === 'light';
   const {
-    testUserEmail,
     modal,
     setLeftDrawerOpen,
     setRightDrawerOpen,
@@ -35,9 +32,7 @@ const NavigationBar = ({
   const { data: session, status } = useSession();
   const userQuery = useUser();
   const userId = userQuery.data?._id ?? '';
-  const notificationsQuery = useNotifications(userId);
   const router = useRouter();
-  const unreadCount = notificationsQuery.data?.filter((notification) => !notification.seen).length ?? 0;
 
   const navLinkClass = (path: string) =>
     `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
@@ -46,7 +41,7 @@ const NavigationBar = ({
         : 'text-gray-300 hover:text-cyan-400 hover:bg-white/5'
     }`;
 
-  if ((!session || status !== 'authenticated') && !testUserEmail) {
+  if (!session || status !== 'authenticated') {
     return (
       <nav
         className={
@@ -86,7 +81,7 @@ const NavigationBar = ({
     );
   }
 
-  if ((session && status === 'authenticated') || testUserEmail) {
+  if (session && status === 'authenticated') {
     return (
       <nav className="glass-effect border-b border-white/10 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -115,23 +110,6 @@ const NavigationBar = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={(evt) => {
-                  const notificationsOpen = modal.name === 'NOTIFICATIONS';
-                  setModal({
-                    name: notificationsOpen ? '' : 'NOTIFICATIONS',
-                    data: {
-                      notificationsAnchor: evt.currentTarget
-                    }
-                  });
-                }}
-                className="p-2 rounded-lg text-gray-300 hover:text-cyan-400 hover:bg-white/10 focus:outline-none relative transition-all duration-200"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-gradient-to-r from-red-500 to-red-600 ring-2 ring-gray-900"></span>
-                )}
-              </button>
               <button
                 onClick={() => setRightDrawerOpen(true)}
                 className="p-2 rounded-lg text-gray-300 hover:text-cyan-400 hover:bg-white/10 focus:outline-none transition-all duration-200"

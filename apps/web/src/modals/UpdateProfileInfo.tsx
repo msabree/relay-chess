@@ -104,23 +104,14 @@ export default function UpdateProfileInfo() {
                   return;
                 }
 
-                updateUser('username', userNameEditText, userQuery.data?._id ?? '').then((res) => {
-                  if (res.data.success === false) {
-                    toast({
-                      title: "Update Profile Failed",
-                      variant: 'destructive',
-                      description: "Username not available.",
-                    });
-                    return;
-                  } else {
-                    setModal({ name: '' });
-                    window.location.reload();
-                  }
-                }).catch(() => {
+                updateUser('username', userNameEditText.trim()).then(() => {
+                  setModal({ name: '' });
+                  userQuery.refetch();
+                }).catch((err) => {
                   toast({
                     title: "Update Profile Failed",
                     variant: 'destructive',
-                    description: "Unable to update username.",
+                    description: err?.response?.status === 409 ? "Username not available." : "Unable to update username.",
                   });
                   return;
                 });

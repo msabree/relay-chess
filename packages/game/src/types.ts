@@ -20,6 +20,7 @@ export type EndReason =
   | 'threefold-repetition'
   | 'fifty-move-rule'
   | 'agreement'
+  | 'abandoned'
   | 'aborted';
 
 export interface Result {
@@ -43,11 +44,13 @@ export interface PlayedMove {
   at: number;
 }
 
+/** waiting: seats can change. playing: starts with the first move. */
 export type Status = 'waiting' | 'playing' | 'over';
 
 export interface GameState {
   id: string;
-  seatsPerTeam: number;
+  /** teams can be uneven; each needs at least one player to start */
+  maxPerTeam: number;
   timeControl: TimeControl | null;
   status: Status;
   /** players in seat order; seat order is relay order */
@@ -68,7 +71,7 @@ export type GameErrorCode =
   | 'not-playing'
   | 'not-seated'
   | 'team-full'
-  | 'seats-not-filled'
+  | 'teams-empty'
   | 'not-your-turn'
   | 'illegal-move'
   | 'cannot-abort';

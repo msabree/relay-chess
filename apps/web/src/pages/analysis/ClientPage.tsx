@@ -7,12 +7,10 @@ import { useGame } from '@/hooks/useGame';
 import NavigationBar from '@/components/NavigationBar';
 import { MoveObject, OPENING_FEN_ANALYSIS, analyzeGame, getAccuracyPercent, getMoveFeedback } from '@/utils/stockfish';
 import { saveAnalysis } from '@/apis/games';
-import { logCrashError } from '@/apis/auth';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/useUser';
 import RightDrawer from '@/components/RightDrawer';
-import Notifications from '@/components/Notifications';
 import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 import { useAnalysisFormatting } from '@/hooks/useAnalysisFormatting';
 
@@ -209,7 +207,7 @@ export default function GameAnalysis() {
       <NavigationBar />
       <main className="min-h-screen py-8">
         <ErrorBoundary fallback={<AnalysisErrorFallback />} onError={(error: unknown, info: ErrorInfo) => {
-          logCrashError('analysis', error as Error, info, '').catch(() => { });
+          console.error('analysis page crashed', error, info);
         }}>
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row gap-8">
@@ -249,7 +247,6 @@ export default function GameAnalysis() {
             </div>
           </div>
           <UpdateProfileInfo />
-          <Notifications />
           <RightDrawer />
         </ErrorBoundary>
       </main>

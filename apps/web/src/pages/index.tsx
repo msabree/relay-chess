@@ -24,7 +24,7 @@ const Github = dynamic(() => import('lucide-react').then(mod => mod.Github), { s
 
 const LandingPage = () => {
   const router = useRouter();
-  const { testUserEmail, setModal, modal } = useContext(AppContext);
+  const { setModal, modal } = useContext(AppContext);
   const { data: session } = useSession();
   const [activeButton, setActiveButton] = useState<'solo' | 'team' | 'private'>('private');
 
@@ -44,7 +44,7 @@ const LandingPage = () => {
     });
   }, [setModal]);
 
-  if (session || testUserEmail) {
+  if (session) {
     router.replace('/home');
   }
 

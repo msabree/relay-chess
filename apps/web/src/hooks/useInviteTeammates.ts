@@ -1,67 +1,39 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import socketIOClient, { Socket } from 'socket.io-client';
-import { CHESS_SERVER_SOCKETS, INVITE_TEAMMATES_CONNECTION_TYPE, TEAMMATE_LOBBY_CONNECTED, TEAMMATE_LOBBY_MATCHMAKING_STARTED } from '@/constants';
-import { TeammateLobbyConnectedEvent } from '@/types';
+import { useEffect, useMemo, useState } from 'react';
 import randomstring from 'randomstring';
-import { useUser } from './useUser';
+import type { Party } from '@relay-chess/game';
+import { request, toServerTimer, useSocket } from '@/lib/socket';
 
 interface UseInviteTeammatesProps {
   selectedTimer: string;
   open: boolean;
-  inviteCode: string; // when shared the invited user will use this invite code to join the lobby
+  /** set when you followed someone's invite link */
+  inviteCode: string;
 }
 
+/** A teammate lobby (party). Friends join with the invite code; the host queues the team. */
 const useInviteTeammates = ({ selectedTimer, open, inviteCode }: UseInviteTeammatesProps) => {
-  const roomId = useMemo(() => {
-    return randomstring.generate(6);
-  }, []);
-  const socketRef = useRef<Socket>(null);
-  const [teammateLobby, setTeammateLobby] = useState<{
-    isHost: boolean;
-    userId: string;
-    username: string;
-}[] | []>([]);
-  const user = useUser();
-  const userId = user?.data?._id;
-  const username = user?.data?.username;
-  const [matchmakingStarted, setMatchmakingStarted] = useState(false);
-  
+  const ownCode = useMemo(() => randomstring.generate(8), []);
+  const roomId = inviteCode === '' ? ownCode : inviteCode;
+  const { socket, connected } = useSocket();
+  const [party, setParty] = useState<Party | null>(null);
+
   useEffect(() => {
-    // Creates a WebSocket connection for matchmaking
-    if(!userId || userId === 'undefined' || !open) {
-      return;
-    }
-
-    socketRef.current = socketIOClient(CHESS_SERVER_SOCKETS, {
-      query: { 
-        connectionType: INVITE_TEAMMATES_CONNECTION_TYPE, 
-        roomId: inviteCode === '' ? roomId : inviteCode,  
-        selectedTimer, 
-        userId,
-        username
-      },
-    });
-
-    // Listens for changes to rooms on server
-    socketRef.current?.on(TEAMMATE_LOBBY_CONNECTED, (event: TeammateLobbyConnectedEvent) => {
-      setMatchmakingStarted(event.matchmakingStarted);
-      setTeammateLobby(event.users);
-    });
-
-    // Destroys the socket reference
-    // when the connection is closed
+    if (!socket || !connected || !open) return;
+    const onParty = (p: Party) => p.id === roomId && setParty(p);
+    socket.on('party:state', onParty);
+    request<{ party: Party }>(socket, 'party:join', { partyId: roomId }).then((res) => res.ok && setParty(res.party));
     return () => {
-      socketRef.current?.disconnect();
+      socket.off('party:state', onParty);
+      socket.emit('party:leave', { partyId: roomId });
     };
-  }, [open, roomId, selectedTimer, userId, username, inviteCode]);
+  }, [socket, connected, open, roomId]);
 
-  const startTeamMatchmaking = () => {
-    socketRef.current?.emit(TEAMMATE_LOBBY_MATCHMAKING_STARTED, {
-      roomId,
-    });
-  };
+  const teammateLobby = (party?.members ?? []).map((m) => ({ isHost: m.isHost, userId: m.id, username: m.name }));
 
-  return { teammateLobby, roomId, startTeamMatchmaking, matchmakingStarted };
+  const startTeamMatchmaking = () =>
+    request(socket, 'party:queue', { partyId: roomId, timeControl: toServerTimer(selectedTimer) });
+
+  return { teammateLobby, roomId, startTeamMatchmaking, matchmakingStarted: party?.queuedFor != null };
 };
 
 export default useInviteTeammates;

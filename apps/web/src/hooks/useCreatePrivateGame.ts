@@ -1,46 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import socketIOClient, { Socket } from 'socket.io-client';
-import { CHESS_SERVER_SOCKETS, PRIVATE_GAME_CREATED, PRIVATE_GAME_CREATION_CONNECTION_TYPE } from '@/constants';
-import { useUser } from './useUser';
+import { useEffect, useState } from 'react';
+import { request, toServerTimer, useSocket } from '@/lib/socket';
 
 interface UseCreatePrivateGameProps {
-    enabled: boolean;
+  enabled: boolean;
   selectedTimer: string;
 }
 
+/** Creates a private room once `enabled` turns on. */
 const useCreatePrivateGame = ({ enabled, selectedTimer }: UseCreatePrivateGameProps) => {
   const [gameRoomId, setGameRoomId] = useState<string>();
-  const socketRef = useRef<Socket>(null);
-  const user = useUser();
-  const userId = user?.data?._id;
-  const username = user?.data?.username;
-  
-  useEffect(() => {  
-    // Creates a WebSocket connection for matchmaking
-    if(!userId || userId === 'undefined' || !enabled) {
-      return;
-    }
+  const { socket, connected } = useSocket();
 
-    socketRef.current = socketIOClient(CHESS_SERVER_SOCKETS, {
-      query: { 
-        connectionType: PRIVATE_GAME_CREATION_CONNECTION_TYPE, 
-        userId,
-        username,
-        selectedTimer
-      },
+  useEffect(() => {
+    if (!enabled || !connected) return;
+    let cancelled = false;
+    request<{ roomId: string }>(socket, 'room:create', { timeControl: toServerTimer(selectedTimer) }).then((res) => {
+      if (!cancelled && res.ok) setGameRoomId(res.roomId);
     });
-
-    // Listens for changes to rooms on server
-    socketRef.current?.on(PRIVATE_GAME_CREATED, (event: {roomId: string}) => {
-      setGameRoomId(event.roomId);
-    });
-
-    // Destroys the socket reference
-    // when the connection is closed
     return () => {
-      socketRef.current?.disconnect();
+      cancelled = true;
     };
-  }, [enabled, selectedTimer, userId, username]);
+  }, [enabled, connected, socket, selectedTimer]);
 
   return { gameRoomId };
 };

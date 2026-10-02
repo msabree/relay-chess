@@ -16,8 +16,6 @@ export enum GAME_TYPES {
     UNTIMED = 'untimed',
 }
 
-export type TIME_CONSTRAINT = 'real-time' | 'turn-based';
-
 // in game interface
 export interface TeamMember {
     id: string; // auto assigned if not logged in
@@ -31,13 +29,6 @@ export interface Spectator {
     id: string; // auto assigned if not logged in
     username: boolean; // if not logged in same as id
     online: boolean;
-}
-
-// for creating team
-export interface NewTeamMember {
-    id: string;
-    username?: string
-    status: string;
 }
 
 export interface LeaderboardRow {
@@ -87,12 +78,7 @@ export interface UserProfile {
     _id: string;
     username: string;
     boardColor: string;
-}
-
-export interface Notification {
-    _id: string;
-    message: string;
-    seen: boolean;
+    guest: boolean;
 }
 
 export interface GameMove {
@@ -124,11 +110,6 @@ export interface Analysis {
     }
 }
 
-export interface PlayerReview {
-    userId: string;
-    review: string;
-    username: string;
-  }
   
 export interface GameData {
     _id: string;
@@ -142,24 +123,6 @@ export interface GameData {
     timestamp: string;
     gameHistory: GameMove[]
     analysis?: Analysis[];
-}
-
-export interface MultiplayerMatchFoundEvent {
-    gameRoomId: string; // nav here to join game
-    players: {
-        userId: string;
-        username: string;
-    }[]
-}
-
-export interface TeammateLobbyConnectedEvent {
-    matchmakingStarted: boolean;
-    roomId: string;
-    users: {
-        isHost: boolean;
-        userId: string;
-        username: string;
-    }[];
 }
 
 export interface LiveGameInfo {
@@ -184,28 +147,6 @@ export interface LiveGameInfo {
     startedAt: string;
     lastMoveAt: string;
     currentTurn: 'w' | 'b';
-}
-
-export interface LiveGamesListEvent {
-    games: LiveGameInfo[];
-}
-
-export interface LiveGameUpdatedEvent {
-    roomId: string;
-    moveCount: number;
-    currentFen: string;
-    timer: {
-        white: number;
-        black: number;
-    };
-    currentTurn: 'w' | 'b';
-    lastMoveAt: string;
-    spectatorCount?: number;
-}
-
-export interface LiveGameRemovedEvent {
-    roomId: string;
-    reason: 'game-over' | 'aborted' | 'timeout';
 }
 
 export type APIError = unknown;

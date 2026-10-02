@@ -1,18 +1,18 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { Chess, Move } from 'chess.js';
 import {
-  ChatMessage,
-  GameMove,
-  Spectator,
-  TEAM_COLOR,
-  TeamInRoom,
-  TeamMember
-} from '@/types';
+  colorOf,
+  nextMover,
+  remainingMs,
+  timeControlKey,
+  turn as boardTurn,
+  type Color,
+  type GameState,
+} from '@relay-chess/game';
+import { ChatMessage, GameMove, Spectator, TEAM_COLOR, TeamInRoom, TeamMember } from '@/types';
 import useChessRoom from '@/hooks/useChessRoom';
-import { TEAM_COLOR_BLACK } from '@/constants';
-import { useGame } from '@/hooks/useGame';
-import { isUnique } from '@/utils/arrays';
-import { checkThreefoldRepetitionFromHistory } from '@/utils/games';
+import { useToast } from '@/components/ui/use-toast';
+import { fromServerTimer } from '@/lib/socket';
 
 interface ChessGameContextProps {
   isPrivateGame: boolean;
@@ -21,7 +21,7 @@ interface ChessGameContextProps {
   opponentTimer: string;
   myTimer: string;
   selectedTimer: string;
-  userId: string; // set in context for anon users
+  userId: string;
   username: string;
   chessGame: Chess;
   moveHistoryFen: string;
@@ -41,19 +41,22 @@ interface ChessGameContextProps {
   gameHistory: GameMove[];
   chatMessages: ChatMessage[];
   usernameResigned: string;
-  canResign: boolean; // abort until black moves, then resign only
+  canResign: boolean; // abort until both sides moved, then resign only
   colorResigned: TEAM_COLOR | undefined;
   isCheckmate: boolean;
   winningTeamId: string;
   losingTeamId: string;
   winningTeamColor: TEAM_COLOR | undefined;
-  sendChatMessage: Function;
-  movePiece: Function;
-  resignGame: Function;
+  drawOfferedBy: TEAM_COLOR | null;
+  roomError: string | null;
+  sendChatMessage: (message: string) => void;
+  movePiece: (move: { from: string; to: string; promotion?: string }) => Move | null;
+  resignGame: () => void;
   // eslint-disable-next-line no-unused-vars
   autoResignGame: (teamColor: TEAM_COLOR, userId: string, username: string) => void;
-  abortGame: Function;
-  setMoveHistoryFen: Function;
+  abortGame: () => void;
+  offerDraw: () => void;
+  setMoveHistoryFen: (fen: string) => void;
   // eslint-disable-next-line no-unused-vars
   changeTeam: (team: 'w' | 'b' | 'spectator') => void;
   offerRematch: () => void;
@@ -61,10 +64,11 @@ interface ChessGameContextProps {
   updateTimer: (timer: string) => void;
 }
 
+const noop = () => {};
 export const ChessGameContext = createContext<ChessGameContextProps>({
   isPrivateGame: false,
   roomId: '',
-  isLoggedIn: false,// default to public
+  isLoggedIn: false,
   opponentTimer: '5:00',
   myTimer: '5:00',
   selectedTimer: '0,0',
@@ -94,301 +98,198 @@ export const ChessGameContext = createContext<ChessGameContextProps>({
   losingTeamId: '',
   winningTeamColor: undefined,
   rematchRoomId: '',
-  sendChatMessage: () => {},
-  movePiece: () => {},
-  resignGame: () => {},
-  autoResignGame: () => {},
-  abortGame: () => {},
-  setMoveHistoryFen: () => {},
-  changeTeam: () => {},
-  offerRematch: () => {},
-  updateTimer: () => {},
+  drawOfferedBy: null,
+  roomError: null,
+  sendChatMessage: noop,
+  movePiece: () => null,
+  resignGame: noop,
+  autoResignGame: noop,
+  abortGame: noop,
+  offerDraw: noop,
+  setMoveHistoryFen: noop,
+  changeTeam: noop,
+  offerRematch: noop,
+  updateTimer: noop,
 });
 
 interface ChessGameProviderProps {
   children: ReactNode;
   isLoggedIn?: boolean;
   roomId: string;
-  userId: string;
-  username: string;
-  selectedTimer: string;
+  /** kept for compatibility; identity now comes from the server session */
+  userId?: string;
+  username?: string;
+  selectedTimer?: string;
 }
 
-export const ChessGameProvider = ({
-  children,
-  isLoggedIn = false,
-  roomId,
-  userId,
-  username,
-  selectedTimer,
-}: ChessGameProviderProps) => {
-  const {
-    timer, // current reference to real-time
-    teamColor,
-    blackTeam,
-    whiteTeam,
-    spectators,
-    whiteOnlineCount,
-    blackOnlineCount,
-    colorResigned,
-    usernameResigned,
-    chatMessages,
-    incomingSelectedTimer,
-    incomingMove,
-    incomingReconnectedBoardPosition,
-    gameHistory,
-    isGameAborted,
-    gameTimedOut,
-    gameEnded,
-    rematchRoomId,
-    offerRematch,
-    dispatchChatMessage,
-    dispatchChessMove,
-    dispatchAbortGame,
-    dispatchResignGame,
-    dispatchGameOver,
-    dispatchUpdateTimer,
-    changeTeam,
-    isPrivateGame,
-    isDraw
-  } = useChessRoom({
-    isLoggedIn,
-    roomId,
-    userId,
-    username,
-    selectedTimer
-  });
+const replay = (game: GameState | undefined) => {
+  const chess = new Chess();
+  for (const m of game?.moves ?? []) chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+  return chess;
+};
 
-  const [chessGame, setChessGame] = useState(new Chess());
+const formatClock = (ms: number) => {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
+/** Pieces captured and promoted by each color, from the move list. */
+function material(chess: Chess) {
+  const out = { w: { captured: [] as string[], promotion: [] as string[] }, b: { captured: [] as string[], promotion: [] as string[] } };
+  for (const m of chess.history({ verbose: true })) {
+    if (m.captured) out[m.color].captured.push(m.captured);
+    if (m.promotion) out[m.color].promotion.push(m.promotion);
+  }
+  return out;
+}
+
+/**
+ * Game state for the game page, derived entirely from server snapshots.
+ * Keeps the field names the existing components use.
+ */
+export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: ChessGameProviderProps) => {
+  const room = useChessRoom(roomId);
+  const { toast } = useToast();
+  const game = room.room?.game;
+  const userId = room.userId;
+
   const [moveHistoryFen, setMoveHistoryFen] = useState('');
-  const gameQuery = useGame(roomId);
+  // Optimistic position while a move is in flight; cleared by the next snapshot.
+  const [optimistic, setOptimistic] = useState<Chess | null>(null);
+  const serverChess = useMemo(() => replay(game), [game]);
+  useEffect(() => setOptimistic(null), [game]);
+  const chessGame = optimistic ?? serverChess;
 
-  // When a game is over this will be not null.
-  // In that state the context should be in a read only/review mode/share game.
-  // Should be able to replay game.
-  // to do: save anon games on backend and store roomId with the game object
-  // to do: refetch on game over event or we may fetch a stale state
-
+  // Tick clocks while a timed game is running.
+  const [now, setNow] = useState(() => Date.now());
+  const running = game?.status === 'playing' && game.timeControl !== null;
   useEffect(() => {
-    const userIdsPlaying = (
-      blackTeam?.usersInRoom?.map((user) => user.id) ?? []
-    ).concat(whiteTeam?.usersInRoom?.map((user) => user.id) ?? []);
+    if (!running) return;
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [running]);
 
-    if (!isUnique(userIdsPlaying) && !isGameAborted) {
-      dispatchAbortGame();
-    }
-  }, [blackTeam?.usersInRoom, whiteTeam?.usersInRoom, isGameAborted, dispatchAbortGame]);
+  const myColor: Color | undefined = game ? (colorOf(game, userId) ?? undefined) : undefined;
+  const turn = game ? boardTurn(game) : 'w';
+  const over = game?.status === 'over';
+  const mover = game && !over ? nextMover(game, turn) : undefined;
+  const bothTeams = !!game && game.teams.w.length > 0 && game.teams.b.length > 0;
+  const result = game?.result ?? null;
+  const mat = useMemo(() => material(serverChess), [serverChess]);
 
-  // Another client made a move
-  // Let's keep the context in sync
-  useEffect(() => {
-    if (incomingMove && incomingMove !== '') {
-      try {
-        const _chessGame = new Chess(chessGame?.fen());
-        _chessGame.move(incomingMove);
-        setChessGame(_chessGame);
-      } catch {}
-    }
-  }, [chessGame, incomingMove]);
+  const team = (c: Color): TeamInRoom | undefined =>
+    game && {
+      id: c === 'w' ? 'white' : 'black',
+      name: c === 'w' ? 'White' : 'Black',
+      usersInRoom: game.teams[c].map((p) => ({
+        id: p.id,
+        username: p.name,
+        online: p.connected,
+        color: c,
+        isMove: !over && turn === c && mover?.id === p.id,
+      })),
+      lastMovedUserId: [...game.moves].reverse().find((m) => m.color === c)?.playerId ?? '',
+      captured: mat[c].captured,
+      promotion: mat[c].promotion,
+    };
 
-  // User connected or reconneted after a game started.
-  // Server has the most up to date board position
-  // Update the fen for this context
-  useEffect(() => {
-    if (
-      incomingReconnectedBoardPosition &&
-      incomingReconnectedBoardPosition !== ''
-    ) {
-      window.setTimeout(() => {
-        setChessGame(new Chess(incomingReconnectedBoardPosition)); // hack!
-      }, 2500);
-    }
-  }, [incomingReconnectedBoardPosition]);
+  const clocks = game ? remainingMs(game, now + room.clockOffset) : null;
+  const clockFor = (c: Color) => (clocks ? formatClock(clocks[c]) : '');
+  const bottom: Color = myColor ?? 'w';
+  const top: Color = bottom === 'w' ? 'b' : 'w';
+  const names = new Map([...(game?.teams.w ?? []), ...(game?.teams.b ?? [])].map((p) => [p.id, p.name]));
 
-  const movePiece = (move: Move) => {
+  const fail = (title: string) => (res: { ok: boolean; error?: string }) => {
+    if (!res.ok) toast({ title, description: res.error, variant: 'destructive' });
+  };
+
+  const movePiece = (move: { from: string; to: string; promotion?: string }) => {
+    if (!game || moveHistoryFen) return null;
+    const next = new Chess(chessGame.fen());
+    let played: Move;
     try {
-      // Save current position before moving
-      const previousFen = chessGame.fen();
-  
-      // Clone game state and make the move
-      const newGame = new Chess(previousFen);
-      const result = newGame.move(move);
-  
-      // Invalid moves return null - silently ignore them
-      if (!result) {
-        return null;
-      }
-  
-      // Update local state
-      setChessGame(newGame);
-  
-      // Notify listeners (UI, network, etc.)
-      dispatchChessMove?.(move, result.captured, result.promotion, newGame, previousFen);
-  
-      // Build move history for threefold repetition check
-      const fullHistory = [...gameHistory.map((m) => m.lanMove as string), result.lan];
-      const isThreefoldRepetition = checkThreefoldRepetitionFromHistory(fullHistory);
-  
-      // Determine endgame conditions
-      const isDraw = newGame.isDraw() || isThreefoldRepetition;
-      const isCheckmate = newGame.isCheckmate();
-      const isGameOver = newGame.isGameOver() || isDraw;
-  
-      // Dispatch game-over event if needed
-      if (isGameOver && teamColor) {
-        dispatchGameOver(teamColor, isDraw, isCheckmate);
-        gameQuery.refetch();
-      }
-  
-      return result;
-  
+      played = next.move(move);
     } catch {
-      // Invalid moves throw errors - silently ignore them
       return null;
     }
-  };
-
-  const isWaiting = () => {
-    if (gameHistory.length === 0 && (whiteOnlineCount === 0 || blackOnlineCount === 0)) {
-      return true;
-    }
-    return false;
-  };
-
-  const isMyMove = () => {
-    const team = teamColor === TEAM_COLOR_BLACK ? blackTeam : whiteTeam;
-    const me = team?.usersInRoom?.find((users) => users.id === userId);
-    if (me && me.isMove) {
-      return true;
-    }
-    return false;
-  };
-
-  // i.e. can i pre-move ...
-  const isMyMoveNext = () => {
-    const team = teamColor === TEAM_COLOR_BLACK ? blackTeam : whiteTeam;
-    const me = team?.usersInRoom?.find((users) => users.id === userId);
-    if (me && me.isMove) {
-      return false;
-    }
-
-    const lastMovedUserId = team?.lastMovedUserId ?? '';
-    const lastMoveUserIndex =
-      team?.usersInRoom?.findIndex((users) => users.id === lastMovedUserId) ??
-      0;
-    const nextMoveUserIndex =
-      (lastMoveUserIndex + 1) % (team?.usersInRoom ?? []).length;
-
-    if (team?.usersInRoom?.[nextMoveUserIndex]?.id === userId && !isMyMove()) {
-      return true;
-    }
-
-    return false;
-  };
-
-  const getUserTurn = () => {
-    return (blackTeam?.usersInRoom ?? [])
-      .concat(whiteTeam?.usersInRoom ?? [])
-      .find((user) => user.isMove);
-  };
-
-  const resignGame = () => {
-    if (teamColor) {
-      dispatchResignGame(teamColor, userId, username);
-      gameQuery.refetch();
-    }
-  };
-
-  const autoResignGame = useCallback((teamColor: TEAM_COLOR, userId: string, username: string) => {
-    dispatchResignGame(teamColor, userId, username);
-    gameQuery.refetch();
-  }, [dispatchResignGame, gameQuery]);
-
-  const abortGame = () => {
-    if (!isGameAborted) {
-      dispatchAbortGame();
-      gameQuery.refetch();
-    }
-  };
-
-  const updateTimer = (timer: string) => {
-    dispatchUpdateTimer(timer);
-  };
-
-  // IMPORTANT
-  // current player's timer is always on bottom
-  // when a user is watching white team is always on bottom
-  const getTimer = (bottom: boolean) => {
-    let seconds = 0;
-
-    if (teamColor) {
-      if (bottom) {
-        seconds = timer[teamColor].initialSeconds;
-      } else {
-        seconds =
-          teamColor === 'b'
-            ? timer['w'].initialSeconds
-            : timer['b'].initialSeconds;
+    setOptimistic(next);
+    room.move(move.from, move.to, move.promotion).then((res) => {
+      if (!res.ok) {
+        setOptimistic(null);
+        fail('Move rejected')(res);
       }
-    } else {
-      seconds = bottom ? timer['w'].initialSeconds : timer['b'].initialSeconds;
-    }
-
-    return new Date(seconds * 1000).toISOString().substring(14, 19);
+    });
+    return played;
   };
 
-  return (
-    <ChessGameContext.Provider
-      value={{
-        isPrivateGame,
-        roomId,
-        isLoggedIn,
-        myTimer: getTimer(true),
-        opponentTimer: getTimer(false),
-        chatMessages,
-        selectedTimer: incomingSelectedTimer, // the selected timer contraint
-        username,
-        userId, // pass here since anonIds are not part of user session
-        teamColor,
-        userToMoveNext: getUserTurn(),
-        isMyMove: isMyMove(),
-        isMyMoveNext: isMyMoveNext(),
-        waitingOnTeamsToJoin: isWaiting(),
-        blackTeam,
-        whiteTeam,
-        spectators,
-        chessGame,
-        moveHistoryFen,
-        // yes, we need all three...
-        // ...
-        // gameEnded - comes from socket
-        // chessGame.isGameOver() - comes from chess.js (local state)
-        // gameQuery.data - comes from database
-        isGameOver: gameEnded || chessGame.isGameOver() || gameQuery.data !== undefined,
-        isDraw: isDraw || chessGame.isDraw() || (gameQuery.data?.result === 'draw'),
-        usernameResigned,
-        canResign: gameHistory.length > 1,
-        colorResigned,
-        isGameAborted,
-        gameTimedOut,
-        gameHistory,
-        isCheckmate: chessGame.isCheckmate() || (gameQuery.data?.result === 'checkmate'),
-        winningTeamId: '',
-        losingTeamId: '',
-        winningTeamColor: gameQuery.data?.winningColor ? (gameQuery.data.winningColor === 'white' ? 'w' : 'b') : (chessGame.isCheckmate() ? (chessGame.turn() === 'w' ? 'b' : 'w') : undefined),
-        rematchRoomId,
-        offerRematch,
-        sendChatMessage: dispatchChatMessage,
-        movePiece,
-        resignGame,
-        autoResignGame,
-        abortGame,
-        setMoveHistoryFen,
-        changeTeam,
-        updateTimer,
-      }}
-    >
-      {children}
-    </ChessGameContext.Provider>
-  );
+  const value: ChessGameContextProps = {
+    isPrivateGame: room.room?.isPrivate ?? false,
+    roomId,
+    isLoggedIn,
+    myTimer: clockFor(bottom),
+    opponentTimer: clockFor(top),
+    chatMessages: [...(room.room?.chat ?? [])]
+      .reverse()
+      .map((m) => ({ id: m.id, message: m.text, userId: m.userId, username: m.name })),
+    selectedTimer: game ? fromServerTimer(timeControlKey(game.timeControl)) : '0,0',
+    username: room.username,
+    userId,
+    teamColor: myColor,
+    userToMoveNext: mover && {
+      id: mover.id,
+      username: mover.name,
+      online: mover.connected,
+      color: turn,
+      isMove: true,
+    },
+    isMyMove: !!game && !over && bothTeams && myColor === turn && mover?.id === userId,
+    isMyMoveNext: !!game && !over && !!myColor && myColor !== turn && nextMover(game, myColor)?.id === userId,
+    waitingOnTeamsToJoin:
+      !game ||
+      (game.status === 'waiting' && (!game.teams.w.some((p) => p.connected) || !game.teams.b.some((p) => p.connected))),
+    blackTeam: team('b'),
+    whiteTeam: team('w'),
+    spectators: (room.room?.spectators ?? []).map((s) => ({ id: s.id, username: s.name as never, online: true })),
+    chessGame,
+    moveHistoryFen,
+    isGameOver: over,
+    isDraw: over && result?.winner === null && result?.reason !== 'aborted',
+    usernameResigned: result?.reason === 'resign' && result.by ? (names.get(result.by) ?? '') : '',
+    canResign: (game?.moves.length ?? 0) > 1,
+    colorResigned: result?.reason === 'resign' && result.winner ? (result.winner === 'w' ? 'b' : 'w') : undefined,
+    isGameAborted: result?.reason === 'aborted',
+    gameTimedOut: result?.reason === 'timeout',
+    gameHistory: (game?.moves ?? []).map((m) => ({
+      move: m.san,
+      sanMove: m.san,
+      lanMove: m.lan,
+      userId: m.playerId,
+      username: names.get(m.playerId),
+      fen: m.fen,
+    })),
+    isCheckmate: result?.reason === 'checkmate',
+    winningTeamId: '',
+    losingTeamId: '',
+    winningTeamColor: result?.winner ?? undefined,
+    rematchRoomId: room.room?.rematchRoomId ?? '',
+    drawOfferedBy: game?.drawOfferBy ?? null,
+    roomError: room.error,
+    sendChatMessage: (message: string) => void room.sendChat(message).then(fail('Message not sent')),
+    movePiece,
+    resignGame: () => void room.resign().then(fail('Could not resign')),
+    // The server forfeits a team that has fully left; clients no longer decide results.
+    autoResignGame: noop,
+    abortGame: () => void room.abort().then(fail('Could not abort')),
+    offerDraw: () => void room.offerDraw().then(fail('Could not offer a draw')),
+    setMoveHistoryFen,
+    changeTeam: (t) => void room.changeTeam(t).then(fail('Could not switch sides')),
+    offerRematch: () =>
+      void room.rematch().then((res) => {
+        if (res.ok) window.location.href = `/games/${res.roomId}`;
+        else fail('Rematch failed')(res);
+      }),
+    updateTimer: (timer: string) => void room.setTimer(timer).then(fail('Could not change the timer')),
+  };
+
+  return <ChessGameContext.Provider value={value}>{children}</ChessGameContext.Provider>;
 };

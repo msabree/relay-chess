@@ -18,7 +18,6 @@ import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import GameHistory from '@/components/GameHistory';
 import RightDrawer from '@/components/RightDrawer';
-import Notifications from '@/components/Notifications';
 import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 import { useRouter } from 'next/router';
 import TeamPlayExperience from '@/components/TeamPlayExperience';
@@ -28,7 +27,7 @@ import { ANALYTICS_TEST_MODE, GOOGLE_ANALYTICS_ID, CREATED_PRIVATE_GAME, SITE_UR
 import useOnlineStats from '@/hooks/useOnlineStats';
 
 export default function Home() {
-  const { testUserEmail, setModal, modal } = useContext(AppContext);
+  const { setModal, modal } = useContext(AppContext);
   const { data: session, status } = useSession();
   const userQuery = useUser();
   const [activeButton, setActiveButton] = useState<'solo' | 'team' | 'private'>('solo');
@@ -43,10 +42,10 @@ export default function Home() {
   });
 
   useEffect(() => {
-    if(!session && status === 'unauthenticated' && !testUserEmail){
+    if(!session && status === 'unauthenticated'){
       router.replace('/');
     }
-  }, [router, session, status, testUserEmail]);
+  }, [router, session, status]);
 
   const handleButtonClick = useCallback((buttonType: 'solo' | 'team' | 'private') => {
     setActiveButton(buttonType);
@@ -186,7 +185,6 @@ export default function Home() {
         />
         <UpdateProfileInfo />
         <RightDrawer />
-        <Notifications />
       </div>
     </>
   );

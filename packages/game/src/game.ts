@@ -11,8 +11,9 @@ import type {
 } from './types';
 
 export const START_FEN = new Chess().fen();
+export const DEFAULT_MAX_PER_TEAM = 4;
 
-const other = (c: Color): Color => (c === 'w' ? 'b' : 'w');
+export const other = (c: Color): Color => (c === 'w' ? 'b' : 'w');
 const clone = (s: GameState): GameState => structuredClone(s);
 const ok = (state: GameState): Outcome => ({ ok: true, state });
 const end = (s: GameState, result: Result): GameState => ({
@@ -25,14 +26,16 @@ const end = (s: GameState, result: Result): GameState => ({
 export function createGame(opts: {
   id: string;
   timeControl?: TimeControl | null;
-  seatsPerTeam?: number;
+  maxPerTeam?: number;
+  teams?: Partial<Record<Color, { id: string; name: string }[]>>;
 }): GameState {
+  const seat = (p: { id: string; name: string }): Player => ({ id: p.id, name: p.name, connected: true });
   return {
     id: opts.id,
-    seatsPerTeam: opts.seatsPerTeam ?? 2,
+    maxPerTeam: opts.maxPerTeam ?? DEFAULT_MAX_PER_TEAM,
     timeControl: opts.timeControl ?? null,
     status: 'waiting',
-    teams: { w: [], b: [] },
+    teams: { w: (opts.teams?.w ?? []).map(seat), b: (opts.teams?.b ?? []).map(seat) },
     moves: [],
     fen: START_FEN,
     clocks: null,
@@ -70,18 +73,18 @@ export function nextMover(state: GameState, color: Color = turn(state)): Player 
   return team[start];
 }
 
-/** Take (or switch to) a seat on a team. Only before the game starts. */
+/** Take (or switch to) a seat on a team. Only before the first move. */
 export function join(state: GameState, player: { id: string; name: string }, color: Color): Outcome {
   if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
   if (colorOf(state, player.id) === color) return ok(state);
-  if (state.teams[color].length >= state.seatsPerTeam) return { ok: false, error: 'team-full' };
+  if (state.teams[color].length >= state.maxPerTeam) return { ok: false, error: 'team-full' };
   const s = clone(state);
   s.teams[other(color)] = s.teams[other(color)].filter((p) => p.id !== player.id);
   s.teams[color].push({ id: player.id, name: player.name, connected: true });
   return ok(s);
 }
 
-/** Leave before the game starts. During a game, use setConnected instead. */
+/** Give up a seat before the first move. During a game, use setConnected instead. */
 export function leave(state: GameState, playerId: string): Outcome {
   if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
   const s = clone(state);
@@ -90,24 +93,17 @@ export function leave(state: GameState, playerId: string): Outcome {
   return ok(s);
 }
 
+export function setTimeControl(state: GameState, timeControl: TimeControl | null): Outcome {
+  if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
+  return ok({ ...clone(state), timeControl });
+}
+
 export function setConnected(state: GameState, playerId: string, connected: boolean): GameState {
   const s = clone(state);
   for (const c of ['w', 'b'] as const) {
     for (const p of s.teams[c]) if (p.id === playerId) p.connected = connected;
   }
   return s;
-}
-
-export function start(state: GameState, now: number): Outcome {
-  if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
-  if (state.teams.w.length < state.seatsPerTeam || state.teams.b.length < state.seatsPerTeam) {
-    return { ok: false, error: 'seats-not-filled' };
-  }
-  const s = clone(state);
-  s.status = 'playing';
-  s.turnStartedAt = now;
-  s.clocks = s.timeControl ? { w: s.timeControl.initialMs, b: s.timeControl.initialMs } : null;
-  return ok(s);
 }
 
 /** Clocks only run once both sides have made a move (lichess convention). */
@@ -122,6 +118,13 @@ export function remainingMs(state: GameState, now: number): Record<Color, number
     r[c] = Math.max(0, r[c] - (now - state.turnStartedAt));
   }
   return r;
+}
+
+/** Milliseconds until the side to move flags, or null if no clock is running. */
+export function msUntilFlag(state: GameState, now: number): number | null {
+  if (state.status !== 'playing' || !clockRunning(state)) return null;
+  const r = remainingMs(state, now);
+  return r ? r[turn(state)] : null;
 }
 
 /** End the game on time if the side to move has flagged. Call from a server timer. */
@@ -140,21 +143,32 @@ function replay(state: GameState): Chess {
 }
 
 /**
- * Play a move for `playerId`. Rejects anyone who is not the next mover in
- * the relay, and any illegal move. If the mover had already flagged, the
- * game ends on time instead and the move is not played.
+ * Play a move for `playerId`. The first move starts the game (both teams need
+ * at least one player). Rejects anyone who is not the next mover in the relay,
+ * and any illegal move. If the mover had already flagged, the game ends on
+ * time instead and the move is not played.
  */
 export function applyMove(state: GameState, playerId: string, input: MoveInput, now: number): Outcome {
-  if (state.status !== 'playing') return { ok: false, error: 'not-playing' };
+  if (state.status === 'over') return { ok: false, error: 'not-playing' };
+  let base = state;
+  if (state.status === 'waiting') {
+    if (state.teams.w.length === 0 || state.teams.b.length === 0) return { ok: false, error: 'teams-empty' };
+    base = {
+      ...clone(state),
+      status: 'playing',
+      turnStartedAt: now,
+      clocks: state.timeControl ? { w: state.timeControl.initialMs, b: state.timeControl.initialMs } : null,
+    };
+  }
 
-  const flagged = checkTimeout(state, now);
+  const flagged = checkTimeout(base, now);
   if (flagged.status === 'over') return ok(flagged);
 
-  const color = turn(state);
-  const mover = nextMover(state, color);
+  const color = turn(base);
+  const mover = nextMover(base, color);
   if (!mover || mover.id !== playerId) return { ok: false, error: 'not-your-turn' };
 
-  const chess = replay(state);
+  const chess = replay(base);
   let played;
   try {
     played = chess.move({ from: input.from, to: input.to, promotion: input.promotion });
@@ -162,10 +176,9 @@ export function applyMove(state: GameState, playerId: string, input: MoveInput, 
     return { ok: false, error: 'illegal-move' };
   }
 
-  const s = clone(state);
-  if (s.clocks && s.timeControl) {
-    if (clockRunning(s) && s.turnStartedAt !== null) s.clocks[color] -= now - s.turnStartedAt;
-    if (clockRunning(s)) s.clocks[color] += s.timeControl.incrementMs;
+  const s = clone(base);
+  if (s.clocks && s.timeControl && clockRunning(s) && s.turnStartedAt !== null) {
+    s.clocks[color] += s.timeControl.incrementMs - (now - s.turnStartedAt);
   }
 
   const move: PlayedMove = {
@@ -210,6 +223,17 @@ export function abort(state: GameState, playerId: string): Outcome {
   if (!colorOf(state, playerId)) return { ok: false, error: 'not-seated' };
   if (state.moves.length >= 2) return { ok: false, error: 'cannot-abort' };
   return ok(end(clone(state), { winner: null, reason: 'aborted', by: playerId }));
+}
+
+/** Forfeit `color` because its whole team left. The server decides when. */
+export function abandon(state: GameState, color: Color): Outcome {
+  if (state.status !== 'playing') return { ok: false, error: 'not-playing' };
+  return ok(end(clone(state), { winner: other(color), reason: 'abandoned' }));
+}
+
+/** True when nobody on `color` is connected. */
+export function teamGone(state: GameState, color: Color): boolean {
+  return state.teams[color].length > 0 && state.teams[color].every((p) => !p.connected);
 }
 
 /** Offer a draw, or accept the other team's standing offer. */

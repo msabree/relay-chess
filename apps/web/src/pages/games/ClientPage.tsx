@@ -14,13 +14,11 @@ import { ChessGameProvider } from '@/contexts/ChessGame';
 import MoveHistory from '@/components/MoveHistory';
 import NavigationBar from '@/components/NavigationBar';
 import { decodeTimer } from '@/utils/timer';
-import Notifications from '@/components/Notifications';
 import RightDrawer from '@/components/RightDrawer';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
 import SignInModal from '@/modals/SignIn';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useIsTablet } from '@/hooks/useIsTablet';
-import { logCrashError } from '@/apis/auth';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from '@/components/ui/button';
 import GameFeedback from '@/modals/GameFeedback';
@@ -119,7 +117,7 @@ const Room = () => {
 
   return (
     <ErrorBoundary fallback={<GamesErrorFallback />} onError={(error: unknown, info: ErrorInfo) => {
-      logCrashError('games', error as Error, info, userQuery.data?._id ?? '').catch(() => {});
+      console.error('game page crashed', error, info);
     }}>
       <ChessGameProvider
         isLoggedIn={isLoggedIn}
@@ -143,7 +141,6 @@ const Room = () => {
           </div>
         </div>
         <GameFeedback open={modal.name === 'GAME_FEEDBACK'} onClose={() => setModal({name: ''})} />
-        {userQuery.data?._id && <Notifications />}
         {userQuery.data?._id && <RightDrawer />}
         {userQuery.data?._id === undefined && <SignInModal />}
         <Chat />
