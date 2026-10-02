@@ -1,44 +1,23 @@
 import Link from 'next/link';
+import { LogoMark } from '@/icons/Logo';
 
-type FooterProps = {
-  variant?: 'dark' | 'light';
-};
+const REPO_URL = 'https://github.com/msabree/relay-chess';
 
-const Footer = ({ variant = 'dark' }: FooterProps) => {
-  const isLight = variant === 'light';
-  const linkClass = isLight
-    ? 'text-sm text-stone-600 hover:text-stone-900 transition-colors'
-    : 'text-sm text-gray-400 hover:text-cyan-400 transition-colors';
-  const dotClass = isLight ? 'text-sm text-stone-300' : 'text-sm text-gray-500';
-  const copyClass = isLight ? 'text-sm text-stone-500' : 'text-sm text-gray-500';
-
-  return (
-    <footer
-      className={
-        isLight
-          ? 'flex flex-col justify-center items-center w-full border-t border-stone-200 bg-stone-50 py-10'
-          : 'flex flex-col justify-center items-center w-full glass-effect border-t border-white/10 py-12'
-      }
-    >
-      <div className="flex flex-col justify-between items-center w-4/5 max-w-7xl">
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full">
-          <Link className={linkClass} href="/contact">
-            Contact Us
-          </Link>
-          <div className={`hidden sm:block ${dotClass}`}>•</div>
-          <Link className={linkClass} href="/terms-of-service">
-            Terms of Service
-          </Link>
-          <div className={`hidden sm:block ${dotClass}`}>•</div>
-          <Link className={linkClass} href="/privacy-policy">
-            Privacy Policy
-          </Link>
-          <div className={`hidden sm:block ${dotClass}`}>•</div>
-          <div className={copyClass}>© {new Date().getFullYear()} RelayChess. All rights reserved.</div>
-        </div>
+const Footer = (_props: { variant?: 'dark' | 'light' }) => (
+  <footer className="border-t border-line">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3 text-sm text-fg-muted">
+        <LogoMark size={20} className="text-fg" />
+        <span>Relay Chess is free and open source. Made by chess friends, for chess friends.</span>
       </div>
-    </footer>
-  );
-};
+      <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <a href={REPO_URL} className="text-fg-muted hover:text-fg">GitHub</a>
+        <Link href="/contact" className="text-fg-muted hover:text-fg">Contact</Link>
+        <Link href="/terms-of-service" className="text-fg-muted hover:text-fg">Terms</Link>
+        <Link href="/privacy-policy" className="text-fg-muted hover:text-fg">Privacy</Link>
+      </nav>
+    </div>
+  </footer>
+);
 
 export default Footer;

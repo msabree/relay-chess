@@ -36,14 +36,14 @@ const ContactUsForm = () => {
   if (isSubmitted) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="p-4 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20">
-          <CheckCircle className="w-12 h-12 text-green-400" />
+        <div className="p-4 rounded-full bg-accent/20">
+          <CheckCircle className="w-12 h-12 text-success" />
         </div>
-        <p className="text-lg font-semibold text-white">{"Message Sent!"}</p>
-        <p className="text-gray-300 text-center">{"We'll get back to you soon."}</p>
+        <p className="text-lg font-semibold text-fg">{"Message Sent!"}</p>
+        <p className="text-fg-muted text-center">{"We'll get back to you soon."}</p>
         <Button
           variant="ghost"
-          className="text-cyan-400 hover:text-cyan-300 hover:bg-white/10 mt-4"
+          className="text-accent-ink hover:text-accent-ink hover:bg-fg/10 mt-4"
           onClick={() => setIsSubmitted(false)}
         >
           {"Send another message"}
@@ -54,14 +54,14 @@ const ContactUsForm = () => {
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-300 text-center text-sm mb-6">{"Have a partnership inquiry, business question, or just want to reach out? We'd love to hear from you!"}</p>
+      <p className="text-fg-muted text-center text-sm mb-6">{"Have a partnership inquiry, business question, or just want to reach out? We'd love to hear from you!"}</p>
 
       <Input
         id="name"
         placeholder={"Your Name"}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="glass-effect border border-white/10 bg-white/5 text-white placeholder:text-gray-400 focus:border-cyan-400/50 focus:ring-cyan-400/50"
+        className="glass-effect border border-line bg-fg/5 text-fg placeholder:text-fg-muted focus:border-accent/50 focus:ring-accent/50"
         disabled={isSubmitting}
       />
 
@@ -71,7 +71,7 @@ const ContactUsForm = () => {
         placeholder={"Your Email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="glass-effect border border-white/10 bg-white/5 text-white placeholder:text-gray-400 focus:border-cyan-400/50 focus:ring-cyan-400/50"
+        className="glass-effect border border-line bg-fg/5 text-fg placeholder:text-fg-muted focus:border-accent/50 focus:ring-accent/50"
         disabled={isSubmitting}
       />
 
@@ -80,14 +80,14 @@ const ContactUsForm = () => {
         placeholder={"Your Message"}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        className="glass-effect border border-white/10 bg-white/5 text-white placeholder:text-gray-400 focus:border-cyan-400/50 focus:ring-cyan-400/50 min-h-[150px] resize-none"
+        className="glass-effect border border-line bg-fg/5 text-fg placeholder:text-fg-muted focus:border-accent/50 focus:ring-accent/50 min-h-[150px] resize-none"
         disabled={isSubmitting}
       />
 
       <div className="flex justify-center pt-4">
         <Button
           disabled={!name.trim() || !email.trim() || !message.trim() || isSubmitting}
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 glow-effect disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
+          className="bg-accent hover:bg-accent/90 text-accent-fg font-semibold px-8 py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
           onClick={handleSubmit}
         >
           {isSubmitting ? "Sending..." : "Send Message"}

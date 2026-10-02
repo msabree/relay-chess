@@ -54,9 +54,9 @@ export const ChessboardSection = ({
 
   return (
     <div className="w-full lg:w-[40%] space-y-6">
-      <Card className="glass-effect border border-white/10 backdrop-blur-xl">
+      <Card className="glass-effect border border-line backdrop-blur-xl">
         <CardHeader className="pb-2">
-          <CardTitle className="text-white text-center text-lg font-semibold">
+          <CardTitle className="text-fg text-center text-lg font-semibold">
             {gameResult}
           </CardTitle>
         </CardHeader>
@@ -83,10 +83,10 @@ export const ChessboardSection = ({
                     {children}
                     {square === currentSquare && (
                       <div className="absolute top-0 right-0 flex items-center justify-center h-3.5 w-3.5">
-                        {(feedback === 'best' || feedback === 'good') && <Check className="h-3.5 w-3.5 text-green-500" />}
-                        {(feedback === 'unexpected') && <HelpCircle className="h-3.5 w-3.5 text-gray-400" />}
-                        {(feedback === 'mistake') && <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />}
-                        {(feedback === 'blunder') && <X className="h-3.5 w-3.5 text-red-500" />}
+                        {(feedback === 'best' || feedback === 'good') && <Check className="h-3.5 w-3.5 text-success" />}
+                        {(feedback === 'unexpected') && <HelpCircle className="h-3.5 w-3.5 text-fg-muted" />}
+                        {(feedback === 'mistake') && <AlertTriangle className="h-3.5 w-3.5 text-accent-ink" />}
+                        {(feedback === 'blunder') && <X className="h-3.5 w-3.5 text-danger" />}
                       </div>
                     )}
                   </div>
@@ -116,7 +116,7 @@ export const ChessboardSection = ({
           <div className="flex justify-between items-center mt-4">
             <Button
               variant="ghost"
-              className="flex items-center space-x-2 text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10 glass-effect border border-white/10"
+              className="flex items-center space-x-2 text-fg-muted hover:text-accent-ink hover:bg-accent/10 glass-effect border border-line"
               onClick={onPreviousMove}
               disabled={currentMoveIndex === 0}
             >
@@ -124,13 +124,13 @@ export const ChessboardSection = ({
               <span className="text-sm">{"Previous"}</span>
             </Button>
 
-            <span className="text-gray-300 text-sm font-medium">
+            <span className="text-fg-muted text-sm font-medium">
               {`Move ${currentMoveIndex + 1} of ${totalMoves}`}
             </span>
 
             <Button
               variant="ghost"
-              className="flex items-center space-x-2 text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10 glass-effect border border-white/10"
+              className="flex items-center space-x-2 text-fg-muted hover:text-accent-ink hover:bg-accent/10 glass-effect border border-line"
               onClick={onNextMove}
               disabled={currentMoveIndex === totalMoves - 1}
             >

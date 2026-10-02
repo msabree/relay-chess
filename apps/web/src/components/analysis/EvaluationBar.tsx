@@ -22,7 +22,7 @@ export const EvaluationBar = ({ winPercent, mate, isWhiteMove, className = '' }:
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {/* Bar container */}
-      <div className="relative h-8 bg-white/5 rounded-full overflow-hidden border border-white/10">
+      <div className="relative h-8 bg-fg/5 rounded-full overflow-hidden border border-line">
         {/* White side (left) */}
         <div 
           className="absolute left-0 top-0 h-full bg-gradient-to-r from-gray-100 to-gray-300 transition-all duration-500"
@@ -36,11 +36,11 @@ export const EvaluationBar = ({ winPercent, mate, isWhiteMove, className = '' }:
         />
         
         {/* Center line */}
-        <div className="absolute left-1/2 top-0 h-full w-px bg-white/30 transform -translate-x-1/2" />
+        <div className="absolute left-1/2 top-0 h-full w-px bg-fg/30 transform -translate-x-1/2" />
         
         {/* Current position indicator */}
         <div 
-          className="absolute top-0 h-full w-1 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)] transition-all duration-500 z-10"
+          className="absolute top-0 h-full w-1 bg-accent shadow-[0_0_10px_rgba(6,182,212,0.8)] transition-all duration-500 z-10"
           style={{ left: `${barPosition}%`, transform: 'translateX(-50%)' }}
         />
       </div>
@@ -48,25 +48,25 @@ export const EvaluationBar = ({ winPercent, mate, isWhiteMove, className = '' }:
       {/* Labels */}
       <div className="flex justify-between items-center text-xs">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-gray-200" />
-          <span className="text-gray-300 font-medium">{"White"}</span>
+          <div className="w-3 h-3 rounded-full bg-raised" />
+          <span className="text-fg-muted font-medium">{"White"}</span>
         </div>
         
         <div className="text-center">
           {hasMate ? (
-            <span className={`font-bold ${isWinning ? 'text-cyan-400' : 'text-gray-400'}`}>
+            <span className={`font-bold ${isWinning ? 'text-accent-ink' : 'text-fg-muted'}`}>
               {Math.abs(mateValue)} {Math.abs(mateValue) === 1 ? "move" : "moves"}
             </span>
           ) : (
-            <span className={`font-bold ${isWinning ? 'text-cyan-400' : 'text-gray-400'}`}>
+            <span className={`font-bold ${isWinning ? 'text-accent-ink' : 'text-fg-muted'}`}>
               {Math.round(perspectivePercent)}%
             </span>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-gray-300 font-medium">{"Black"}</span>
-          <div className="w-3 h-3 rounded-full bg-gray-800" />
+          <span className="text-fg-muted font-medium">{"Black"}</span>
+          <div className="w-3 h-3 rounded-full bg-raised" />
         </div>
       </div>
     </div>

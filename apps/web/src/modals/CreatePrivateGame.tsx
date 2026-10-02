@@ -31,7 +31,7 @@ export default function CreatePrivateGame({ open, onClose }: CreatePrivateGamePr
     if (gameRoomId !== undefined) {
       setTimeout(() => {
         router.push(`/games/${gameRoomId}`);
-      }, 3000);
+      }, 300);
     }
   }, [gameRoomId, router, createGameStarted]);
 
@@ -45,9 +45,9 @@ export default function CreatePrivateGame({ open, onClose }: CreatePrivateGamePr
       setSelectedTimer(TIMER_OPTIONS[0].time);
       onClose();
     }}>
-      <DialogContent className='glass-effect border border-white/10 backdrop-blur-xl max-w-md'>
+      <DialogContent className='glass-effect border border-line backdrop-blur-xl max-w-md'>
         <DialogHeader>
-          <DialogTitle className='text-center text-3xl font-bold text-gradient bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent'>
+          <DialogTitle className='text-center text-3xl font-bold text-gradient'>
             Create Private Game
           </DialogTitle>
         </DialogHeader>
@@ -56,23 +56,23 @@ export default function CreatePrivateGame({ open, onClose }: CreatePrivateGamePr
           {gameRoomId ? (
             <div className='text-center space-y-4'>
               <div className='flex justify-center'>
-                <div className='w-16 h-16 rounded-full glass-effect border-2 border-cyan-400/50 flex items-center justify-center'>
-                  <Sparkles className='w-8 h-8 text-cyan-400 animate-pulse' />
+                <div className='w-16 h-16 rounded-full glass-effect border-2 border-accent/50 flex items-center justify-center'>
+                  <Sparkles className='w-8 h-8 text-accent-ink animate-pulse' />
                 </div>
               </div>
-              <div className='text-lg font-semibold text-white'>Game Created!</div>
-              <div className='text-sm text-gray-400'>Redirecting to your game...</div>
+              <div className='text-lg font-semibold text-fg'>Game Created!</div>
+              <div className='text-sm text-fg-muted'>Redirecting to your game...</div>
             </div>
           ) : (
             <>
               <div className='text-center space-y-2'>
-                <p className='text-gray-300 text-sm leading-relaxed'>
+                <p className='text-fg-muted text-sm leading-relaxed'>
                   Select your time control and create a private game. Once your game is ready, you will be redirected to the game.
                 </p>
               </div>
 
-              <div className='glass-effect border border-white/10 rounded-xl p-4 space-y-3'>
-                <div className='flex items-center gap-2 text-cyan-400 mb-3'>
+              <div className='glass-effect border border-line rounded-xl p-4 space-y-3'>
+                <div className='flex items-center gap-2 text-accent-ink mb-3'>
                   <Clock className='w-5 h-5' />
                   <span className='font-semibold text-sm'>Time Control</span>
                 </div>
@@ -84,7 +84,7 @@ export default function CreatePrivateGame({ open, onClose }: CreatePrivateGamePr
 
               {!createGameStarted && (
                 <Button 
-                  className='w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-6 rounded-lg transition-all duration-300 glow-effect flex items-center justify-center gap-2'
+                  className='w-full bg-accent hover:bg-accent/90 text-accent-fg font-semibold py-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2'
                   onClick={handleCreateGame}
                 >
                   <Users className='w-5 h-5' />
@@ -95,11 +95,11 @@ export default function CreatePrivateGame({ open, onClose }: CreatePrivateGamePr
               {createGameStarted && !gameRoomId && (
                 <div className='text-center py-6 space-y-3'>
                   <div className='flex justify-center gap-2'>
-                    <div className='w-3 h-3 bg-cyan-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }}></div>
-                    <div className='w-3 h-3 bg-cyan-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }}></div>
-                    <div className='w-3 h-3 bg-cyan-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }}></div>
+                    <div className='w-3 h-3 bg-accent rounded-full animate-bounce' style={{ animationDelay: '0ms' }}></div>
+                    <div className='w-3 h-3 bg-accent rounded-full animate-bounce' style={{ animationDelay: '150ms' }}></div>
+                    <div className='w-3 h-3 bg-accent rounded-full animate-bounce' style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <div className='text-sm text-gray-400'>Creating your game...</div>
+                  <div className='text-sm text-fg-muted'>Creating your game...</div>
                 </div>
               )}
             </>

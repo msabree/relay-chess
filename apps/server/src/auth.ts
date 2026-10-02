@@ -48,10 +48,14 @@ export function signIdentityToken(secret: string, email: string, name?: string):
   return jwt.sign({ email, name }, secret, { audience: IDENTITY_AUDIENCE, expiresIn: '5m' });
 }
 
+const ADJECTIVES = ['Bold', 'Calm', 'Clever', 'Daring', 'Eager', 'Fuzzy', 'Gentle', 'Happy', 'Jolly', 'Keen', 'Lucky', 'Mellow', 'Nimble', 'Plucky', 'Quiet', 'Rapid', 'Sly', 'Sunny', 'Swift', 'Witty'];
+const ANIMALS = ['Badger', 'Bison', 'Crane', 'Falcon', 'Ferret', 'Fox', 'Gecko', 'Heron', 'Ibex', 'Koala', 'Lynx', 'Marten', 'Moose', 'Newt', 'Otter', 'Owl', 'Panda', 'Raven', 'Seal', 'Yak'];
+const pick = (xs: string[]) => xs[randomBytes(1)[0]! % xs.length]!;
+
+/** Guests get a friendly random name like "Plucky Otter". */
 export function newGuest(): Identity {
   const id = `guest_${randomBytes(9).toString('base64url')}`;
-  const name = `Guest-${randomBytes(2).toString('hex')}`;
-  return { id, name, guest: true };
+  return { id, name: `${pick(ADJECTIVES)} ${pick(ANIMALS)}`, guest: true };
 }
 
 export function bearer(header: string | undefined): string | null {

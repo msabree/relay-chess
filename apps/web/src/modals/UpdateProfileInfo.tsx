@@ -31,10 +31,10 @@ export default function UpdateProfileInfo() {
 
   return (
     <Dialog open={modal.name === 'UPDATE_PROFILE_INFO'} onOpenChange={() => setModal({ name: '' })}>
-      <DialogContent className="glass-effect border border-white/10 backdrop-blur-xl shadow-xl max-w-md">
+      <DialogContent className="glass-effect border border-line backdrop-blur-xl shadow-xl max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center text-3xl font-bold text-gradient bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center justify-center gap-3">
-            <Sparkles className="w-7 h-7 text-cyan-400" />
+          <DialogTitle className="text-center text-3xl font-bold text-gradient flex items-center justify-center gap-3">
+            <Sparkles className="w-7 h-7 text-accent-ink" />
             {"Update Profile"}
           </DialogTitle>
         </DialogHeader>
@@ -42,34 +42,34 @@ export default function UpdateProfileInfo() {
         <div className="space-y-6 py-4">
           {/* Username Input */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-              <User className="w-4 h-4 text-cyan-400" />
+            <label className="text-sm font-semibold text-fg-muted flex items-center gap-2">
+              <User className="w-4 h-4 text-accent-ink" />
               {"Username"}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-fg-muted" />
               </div>
               <Input
                 defaultValue={userQuery.data?.username}
-                className="pl-12 glass-effect border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus:border-cyan-400/50 focus:ring-cyan-400/50 hover:border-cyan-400/30 transition-all duration-200"
+                className="pl-12 glass-effect border border-line bg-fg/5 text-fg placeholder:text-fg-subtle focus:border-accent/50 focus:ring-accent/50 hover:border-accent/30 transition-all duration-200"
                 placeholder={"Enter a new username"}
                 onChange={(evt) => {
                   setUserNameEditText(evt.target.value);
                 }}
               />
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-fg-muted">
               {"Username must be 2-30 characters and contain only letters, numbers, and underscores."}
             </p>
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+          <div className="flex justify-end gap-3 pt-4 border-t border-line">
             <Button
               variant="ghost"
               onClick={() => setModal({ name: '' })}
-              className="glass-effect border border-white/10 hover:border-white/30 hover:bg-white/10 text-gray-300 hover:text-white transition-all duration-200"
+              className="glass-effect border border-line hover:border-line hover:bg-fg/10 text-fg-muted hover:text-fg transition-all duration-200"
             >
               <X className="w-4 h-4 mr-2" />
               {"Cancel"}
@@ -116,7 +116,7 @@ export default function UpdateProfileInfo() {
                   return;
                 });
               }}
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold glow-effect transition-all duration-300 flex items-center gap-2"
+              className="bg-accent hover:bg-accent/90 text-accent-fg font-semibold transition-all duration-300 flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               {"Save Changes"}

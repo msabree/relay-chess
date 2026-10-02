@@ -1,80 +1,97 @@
-import type { Config } from "tailwindcss"
+import type { Config } from 'tailwindcss';
+
+const token = (name: string) => `hsl(var(--${name}) / <alpha-value>)`;
 
 const config = {
-  darkMode: ["class"],
-  content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-	],
-  prefix: "",
+  darkMode: ['class'],
+  content: ['./src/**/*.{ts,tsx}'],
   theme: {
     container: {
       center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      padding: '1rem',
+      screens: { '2xl': '1280px' },
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+        // Semantic tokens (light + dark come from globals.css)
+        bg: token('bg'),
+        surface: token('surface'),
+        raised: token('raised'),
+        line: token('line'),
+        fg: {
+          DEFAULT: token('fg'),
+          muted: token('fg-muted'),
+          subtle: token('fg-subtle'),
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: token('accent'),
+          fg: token('accent-fg'),
+          ink: token('accent-ink'),
+          foreground: token('accent-fg'),
         },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+        danger: token('danger'),
+        success: token('success'),
+
+        // Brand scales for one-off use
+        yellow: {
+          50: '#FFFBEA',
+          100: '#FFF3C4',
+          200: '#FFE58A',
+          300: '#FFD84D',
+          400: '#FFCE1F',
+          500: '#FFC800',
+          600: '#D9A900',
+          700: '#A67F00',
+          800: '#735800',
+          900: '#3D2F00',
         },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+        ink: {
+          50: '#F5F5F3',
+          100: '#E6E6E3',
+          200: '#C9CACC',
+          300: '#A3A9B0',
+          400: '#7E858D',
+          500: '#5A6068',
+          600: '#3A3F45',
+          700: '#2C3035',
+          800: '#17191C',
+          900: '#0E0F11',
+          950: '#08090A',
         },
+
+        // shadcn/ui
+        border: token('border'),
+        input: token('input'),
+        ring: token('ring'),
+        background: token('background'),
+        foreground: token('foreground'),
+        primary: { DEFAULT: token('primary'), foreground: token('primary-foreground') },
+        secondary: { DEFAULT: token('secondary'), foreground: token('secondary-foreground') },
+        destructive: { DEFAULT: token('destructive'), foreground: token('destructive-foreground') },
+        muted: { DEFAULT: token('muted'), foreground: token('muted-foreground') },
+        popover: { DEFAULT: token('popover'), foreground: token('popover-foreground') },
+        card: { DEFAULT: token('card'), foreground: token('card-foreground') },
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
+        'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
+        'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config
+  plugins: [require('tailwindcss-animate')],
+} satisfies Config;
 
-export default config
+export default config;

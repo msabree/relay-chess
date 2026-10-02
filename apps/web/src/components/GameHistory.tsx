@@ -26,19 +26,19 @@ const GameHistory = () => {
   const [gamesToShow, setGamesToShow] = useState(INITIAL_GAMES_TO_SHOW);
   const getResult = (game: GameData) => {
     if(game.winningColor === 'white' && game.whiteTeamUserIds.includes(userId)){
-      return { text: "Victory", color: 'text-green-400' };
+      return { text: "Victory", color: 'text-success' };
     }
     else if(game.winningColor === 'black' && game.blackTeamUserIds.includes(userId)){
-      return { text: "Victory", color: 'text-green-400' };
+      return { text: "Victory", color: 'text-success' };
     }
     else if(game.winningColor === 'white' && game.blackTeamUserIds.includes(userId)){
-      return { text: "Defeat", color: 'text-red-400' };
+      return { text: "Defeat", color: 'text-danger' };
     }
     else if(game.winningColor === 'black' && game.whiteTeamUserIds.includes(userId)){
-      return { text: "Defeat", color: 'text-red-400' };
+      return { text: "Defeat", color: 'text-danger' };
     }
     else {
-      return { text: "Draw", color: 'text-yellow-400' };
+      return { text: "Draw", color: 'text-accent-ink' };
     }
   };
 
@@ -65,11 +65,11 @@ const GameHistory = () => {
   if (!allGames.length) {
     return (
       <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full glass-effect border border-white/10 mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full glass-effect border border-line mb-4">
           <Trophy className="h-8 w-8 text-amber-400/50" />
         </div>
-        <p className="text-lg text-gray-300 font-semibold mb-2">{"No games played yet"}</p>
-        <p className="text-sm text-gray-400">{"Start a new game to see your history here"}</p>
+        <p className="text-lg text-fg-muted font-semibold mb-2">{"No games played yet"}</p>
+        <p className="text-sm text-fg-muted">{"Start a new game to see your history here"}</p>
       </div>
     );
   }
@@ -80,17 +80,17 @@ const GameHistory = () => {
         {visibleGames.map((game) => {
           const result = getResult(game);
           return (
-            <Card key={game._id} className="glass-effect border border-white/10 hover:border-cyan-400/30 transition-all duration-300 backdrop-blur-xl">
+            <Card key={game._id} className="glass-effect border border-line hover:border-accent/30 transition-all duration-300 backdrop-blur-xl">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-5">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-4">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">{formatDate(game.timestamp)}</span>
+                      <Clock className="h-4 w-4 text-fg-muted" />
+                      <span className="text-sm text-fg-muted">{formatDate(game.timestamp)}</span>
                     </div>
                     <div className="flex items-center gap-2.5 mb-5">
-                      <Users className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">
+                      <Users className="h-4 w-4 text-fg-muted" />
+                      <span className="text-sm text-fg-muted">
                         {`${game.whiteTeamUserIds.length + game.blackTeamUserIds.length} players`}
                       </span>
                     </div>
@@ -98,7 +98,7 @@ const GameHistory = () => {
                       {result.text}
                     </div>
                   </div>
-                  <div className="w-[100px] h-[100px] rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
+                  <div className="w-[100px] h-[100px] rounded-lg overflow-hidden border border-line flex-shrink-0">
                     <Chessboard 
                       position={game.gameHistory[game.gameHistory.length - 1].fen}
                       isDraggablePiece={() => false}
@@ -113,7 +113,7 @@ const GameHistory = () => {
                 <div className="mt-5 flex justify-end">
                   <Button 
                     variant="ghost" 
-                    className="glass-effect border border-white/10 hover:border-cyan-400/50 hover:bg-cyan-400/10 text-white hover:text-cyan-400 transition-all duration-200 px-4 py-2"
+                    className="glass-effect border border-line hover:border-accent/50 hover:bg-accent/10 text-fg hover:text-accent-ink transition-all duration-200 px-4 py-2"
                     asChild
                     onClick={() => {
                       ReactGA.event({
@@ -139,7 +139,7 @@ const GameHistory = () => {
           <Button
             variant="ghost"
             onClick={showingAll ? handleShowLess : handleShowMore}
-            className="glass-effect border border-white/10 hover:border-cyan-400/50 hover:bg-cyan-400/10 text-white hover:text-cyan-400 transition-all duration-200 flex items-center gap-2.5 px-5 py-2.5"
+            className="glass-effect border border-line hover:border-accent/50 hover:bg-accent/10 text-fg hover:text-accent-ink transition-all duration-200 flex items-center gap-2.5 px-5 py-2.5"
           >
             {showingAll ? (
               <>

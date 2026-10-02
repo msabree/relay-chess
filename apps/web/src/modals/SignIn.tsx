@@ -13,23 +13,23 @@ export default function SignIn() {
   const { modal, setModal } = useContext(AppContext);
   return (
     <Dialog open={modal.name === 'SIGN_IN'} onOpenChange={() => setModal({ name: '' })}>
-      <DialogContent className='glass-effect border border-white/10 backdrop-blur-xl shadow-xl max-w-md'>
+      <DialogContent className='glass-effect border border-line backdrop-blur-xl shadow-xl max-w-md'>
         <DialogHeader>
-          <DialogTitle className='text-center text-3xl font-bold text-gradient bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center justify-center gap-3'>
-            <Sparkles className='w-7 h-7 text-cyan-400' />
+          <DialogTitle className='text-center text-3xl font-bold text-gradient flex items-center justify-center gap-3'>
+            <Sparkles className='w-7 h-7 text-accent-ink' />
             {"Welcome to Relay Chess"}
           </DialogTitle>
         </DialogHeader>
 
         <div className='space-y-6 py-4'>
-          <div className='text-center text-gray-300 text-lg leading-relaxed'>
+          <div className='text-center text-fg-muted text-lg leading-relaxed'>
             {"Sign in to play team chess with friends and track your progress"}
           </div>
 
           <div className='space-y-3'>
             <Button
               variant='ghost'
-              className='w-full flex items-center justify-center gap-3 glass-effect border border-white/10 hover:border-white/30 hover:bg-white/10 text-white font-semibold py-6 rounded-xl transition-all duration-300 group'
+              className='w-full flex items-center justify-center gap-3 glass-effect border border-line hover:border-line hover:bg-fg/10 text-fg font-semibold py-6 rounded-xl transition-all duration-300 group'
               onClick={() => signIn('google')}
             >
               <Google className='h-6 w-6' />
@@ -38,7 +38,7 @@ export default function SignIn() {
 
             <Button
               variant='ghost'
-              className='w-full flex items-center justify-center gap-3 glass-effect border border-white/10 hover:border-white/30 hover:bg-white/10 text-white font-semibold py-6 rounded-xl transition-all duration-300 group'
+              className='w-full flex items-center justify-center gap-3 glass-effect border border-line hover:border-line hover:bg-fg/10 text-fg font-semibold py-6 rounded-xl transition-all duration-300 group'
               onClick={() => signIn('apple')}
             >
               <Apple className='h-6 w-6 fill-white' />
@@ -46,13 +46,13 @@ export default function SignIn() {
             </Button>
           </div>
 
-          <div className='text-center text-xs text-gray-400 leading-relaxed pt-2'>
+          <div className='text-center text-xs text-fg-muted leading-relaxed pt-2'>
             {"By signing in, you agree to our"}{' '}
-            <a href='/terms-of-service' className='text-cyan-400 hover:text-cyan-300 underline' target='_blank' rel='noopener noreferrer'>
+            <a href='/terms-of-service' className='text-accent-ink hover:text-accent-ink underline' target='_blank' rel='noopener noreferrer'>
               {"Terms of Service"}
             </a>
             {' '}{"and"}{' '}
-            <a href='/privacy-policy' className='text-cyan-400 hover:text-cyan-300 underline' target='_blank' rel='noopener noreferrer'>
+            <a href='/privacy-policy' className='text-accent-ink hover:text-accent-ink underline' target='_blank' rel='noopener noreferrer'>
               {"Privacy Policy"}
             </a>
           </div>

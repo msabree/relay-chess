@@ -1,131 +1,112 @@
-import { useContext } from 'react';
-import { useSession } from 'next-auth/react';
+import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import ReactGA from 'react-ga4';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
-import LeftDrawer from './LeftDrawer';
-import LogoV1 from '@/icons/LogoV1';
-import LogoSmallV1 from '@/icons/LogoSmallV1';
-import dynamic from 'next/dynamic';
-
-const Menu = dynamic(() => import('lucide-react').then(mod => mod.Menu), { ssr: false });
-const Settings = dynamic(() => import('lucide-react').then(mod => mod.Settings), { ssr: false });
-import { Button } from '@/components/ui/button';
-import ReactGA from 'react-ga4';
+import Logo from '@/icons/Logo';
+import ThemeToggle from '@/components/ThemeToggle';
+import RightDrawer from '@/components/RightDrawer';
+import SignInModal from '@/modals/SignIn';
+import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 import { CLICKED_SIGN_IN } from '@/constants';
 
-const NavigationBar = ({
-  hideSignIn,
-  appearance = 'dark',
-}: {
-  hideSignIn?: boolean;
-  appearance?: 'dark' | 'light';
-}) => {
-  const isLight = appearance === 'light';
-  const {
-    modal,
-    setLeftDrawerOpen,
-    setRightDrawerOpen,
-    setModal
-  } = useContext(AppContext);
+/** One header for every page: brand, a few links, theme toggle, account. */
+const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: boolean }) => {
+  const { setModal, setRightDrawerOpen } = useContext(AppContext);
   const { data: session, status } = useSession();
-  const userQuery = useUser();
-  const userId = userQuery.data?._id ?? '';
+  const user = useUser();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const signedIn = status === 'authenticated' && !!session;
+  const home = signedIn ? '/home' : '/';
 
-  const navLinkClass = (path: string) =>
-    `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-      router.pathname === path
-        ? 'text-cyan-400 bg-cyan-400/10'
-        : 'text-gray-300 hover:text-cyan-400 hover:bg-white/5'
+  const links = [
+    { href: home, label: 'Play' },
+    { href: '/live-games', label: 'Watch' },
+    { href: '/leaderboard', label: 'Leaderboard' },
+  ];
+  const linkClass = (href: string) =>
+    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      router.pathname === href ? 'text-fg bg-fg/[0.06]' : 'text-fg-muted hover:text-fg hover:bg-fg/5'
     }`;
 
-  if (!session || status !== 'authenticated') {
-    return (
-      <nav
-        className={
-          isLight
-            ? 'sticky top-0 z-50 border-b border-stone-200 bg-white/95 backdrop-blur-sm'
-            : 'glass-effect border-b border-white/10 backdrop-blur-xl sticky top-0 z-50'
-        }
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
-              <LogoV1 width={200} height={45}/>
+  return (
+    <>
+      <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
+        <div className={`mx-auto flex h-14 items-center justify-between gap-4 px-4 ${compact ? 'max-w-[1400px]' : 'max-w-6xl'}`}>
+          <div className="flex items-center gap-6">
+            <Link href={home} className="rounded-md" aria-label="Relay Chess home">
+              <Logo />
             </Link>
-            {!hideSignIn && (
-              <div className="flex items-center">
-                <Button
-                  onClick={() => {
-                    setModal({ name: 'SIGN_IN' });
-                    ReactGA.event({
-                      category: CLICKED_SIGN_IN,
-                      action: 'Clicked Sign In',
-                    });
-                  }}
-                  className={
-                    isLight
-                      ? 'bg-stone-900 hover:bg-stone-800 text-white px-5 py-2 rounded-lg font-medium'
-                      : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition-all duration-300 glow-effect'
-                  }
-                >
-                  Sign In
-                </Button>
-              </div>
-            )}
+            <nav aria-label="Main" className="hidden md:flex items-center gap-1">
+              {links.map((l) => (
+                <Link key={l.label} href={l.href} className={linkClass(l.href)}>
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </div>
-      </nav>
-    );
-  }
 
-  if (session && status === 'authenticated') {
-    return (
-      <nav className="glass-effect border-b border-white/10 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            {signedIn ? (
               <button
-                onClick={() => setLeftDrawerOpen(true)}
-                className="md:hidden p-2 rounded-lg text-gray-300 hover:text-cyan-400 hover:bg-white/10 focus:outline-none transition-all duration-200"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-              <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
-                <LogoV1 width={200} height={45} className="hidden md:block"/>
-                <LogoSmallV1 width={30} height={40} fill={'#2dd4bf'} className="md:hidden" />
-              </Link>
-              <div className="hidden md:flex items-center gap-1 ml-6">
-                <Link href="/home" className={navLinkClass('/home')}>
-                  {"Home"}
-                </Link>
-                <Link href="/live-games" className={navLinkClass('/live-games')}>
-                  {"Live Games"}
-                </Link>
-                <Link href="/leaderboard" className={navLinkClass('/leaderboard')}>
-                  {"Leaderboard"}
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
+                type="button"
                 onClick={() => setRightDrawerOpen(true)}
-                className="p-2 rounded-lg text-gray-300 hover:text-cyan-400 hover:bg-white/10 focus:outline-none transition-all duration-200"
-                aria-label={"Settings"}
+                className="ml-1 inline-flex h-10 items-center gap-2 rounded-lg pl-1.5 pr-3 hover:bg-fg/5"
+                aria-label="Account and settings"
               >
-                <Settings className="h-5 w-5" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-accent-fg text-xs font-semibold">
+                  {(user.data?.username ?? '?').charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden sm:inline max-w-[140px] truncate text-sm font-medium">{user.data?.username}</span>
               </button>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setModal({ name: 'SIGN_IN' });
+                  ReactGA.event({ category: CLICKED_SIGN_IN, action: 'Clicked Sign In' });
+                }}
+                className="ml-1 h-10 rounded-lg px-4 text-sm font-semibold bg-fg text-bg hover:bg-fg/85 transition-colors"
+              >
+                Sign in
+              </button>
+            )}
+            <button
+              type="button"
+              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-fg/5"
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
           </div>
         </div>
-        <LeftDrawer />
-      </nav>
-    );
-  }
-
-  return null;
+        {menuOpen && (
+          <nav aria-label="Main" className="md:hidden border-t border-line px-4 py-2 flex flex-col">
+            {links.map((l) => (
+              <Link key={l.label} href={l.href} className={`${linkClass(l.href)} py-3`} onClick={() => setMenuOpen(false)}>
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+      </header>
+      <SignInModal />
+      {signedIn && (
+        <>
+          <RightDrawer />
+          <UpdateProfileInfo />
+        </>
+      )}
+    </>
+  );
 };
 
 export default NavigationBar;

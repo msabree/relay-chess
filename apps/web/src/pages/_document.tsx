@@ -2,12 +2,14 @@ import { Head, Html, Main, NextScript } from 'next/document';
 
 export default function RelayDocument() {
   return (
-    <Html lang="en">
+    // next-themes sets the theme class on <html> before hydration
+    <Html lang="en" suppressHydrationWarning>
       <Head>
         <meta charSet="utf-8" />
-        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="alternate icon" href="/favicon.ico" />
+        <meta name="theme-color" content="#0E0F11" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#FAF8F2" media="(prefers-color-scheme: light)" />
       </Head>
       <body>
         <Main />

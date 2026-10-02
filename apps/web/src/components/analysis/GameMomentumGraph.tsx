@@ -52,14 +52,14 @@ export const GameMomentumGraph = ({ analysis, currentMoveIndex, winningColor }: 
   const range = maxPercent - minPercent || 1;
 
   return (
-    <div className="glass-effect border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
+    <div className="glass-effect border border-line rounded-2xl p-6 backdrop-blur-xl">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-bold text-lg flex items-center gap-2">
-          <span className="text-cyan-400">📈</span>
+        <h3 className="text-fg font-bold text-lg flex items-center gap-2">
+          <span className="text-accent-ink">📈</span>
           {"Game Momentum"}
         </h3>
         {turningPoint !== null && (
-          <span className="text-xs text-cyan-400 font-semibold bg-cyan-500/10 px-3 py-1 rounded-full">
+          <span className="text-xs text-accent-ink font-semibold bg-accent/10 px-3 py-1 rounded-full">
             {"Turning Point"}: {`Move ${dataPoints[turningPoint].move}`}
           </span>
         )}
@@ -101,7 +101,7 @@ export const GameMomentumGraph = ({ analysis, currentMoveIndex, winningColor }: 
           
           <defs>
             <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
+              <stop offset="0%" stopColor="#FFC800" />
               <stop offset="100%" stopColor="#8b5cf6" />
             </linearGradient>
           </defs>
@@ -117,14 +117,14 @@ export const GameMomentumGraph = ({ analysis, currentMoveIndex, winningColor }: 
                   cx={x}
                   cy={y}
                   r="8"
-                  fill="#06b6d4"
+                  fill="#FFC800"
                   className="animate-pulse"
                 />
                 <circle
                   cx={x}
                   cy={y}
                   r="12"
-                  fill="#06b6d4"
+                  fill="#FFC800"
                   opacity="0.3"
                   className="animate-ping"
                 />
@@ -159,7 +159,7 @@ export const GameMomentumGraph = ({ analysis, currentMoveIndex, winningColor }: 
         </svg>
         
         {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-400 pr-2">
+        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-fg-muted pr-2">
           <span>100%</span>
           <span>50%</span>
           <span>0%</span>
@@ -167,7 +167,7 @@ export const GameMomentumGraph = ({ analysis, currentMoveIndex, winningColor }: 
       </div>
       
       {/* X-axis labels */}
-      <div className="flex justify-between mt-2 text-xs text-gray-400">
+      <div className="flex justify-between mt-2 text-xs text-fg-muted">
         <span>{"Move 1"}</span>
         <span>{`Move ${Math.floor(dataPoints.length / 2)}`}</span>
         <span>{`Move ${dataPoints.length}`}</span>

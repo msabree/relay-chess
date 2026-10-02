@@ -188,12 +188,12 @@ const LegalDocument = ({ document }: LegalDocumentProps) => {
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
           {legal.title} <span className="text-gradient">{legal.titleAccent}</span>
         </h1>
-        <p className="text-gray-400 text-lg">{legal.lastUpdated}</p>
+        <p className="text-fg-muted text-lg">{legal.lastUpdated}</p>
       </div>
 
       {document === 'privacy' && 'intro' in legal && (
-        <div className="glass-effect border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-xl mb-8">
-          <p className="text-lg text-gray-300 leading-relaxed">{PRIVACY_LEGAL.intro}</p>
+        <div className="glass-effect border border-line rounded-2xl p-6 md:p-8 backdrop-blur-xl mb-8">
+          <p className="text-lg text-fg-muted leading-relaxed">{PRIVACY_LEGAL.intro}</p>
         </div>
       )}
 
@@ -201,28 +201,28 @@ const LegalDocument = ({ document }: LegalDocumentProps) => {
         {sections.map((section, index) => (
           <section
             key={index}
-            className="glass-effect border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-xl"
+            className="glass-effect border border-line rounded-2xl p-6 md:p-8 backdrop-blur-xl"
           >
             <h2 className="text-2xl font-bold mb-4">{section.title}</h2>
             {section.paragraphs?.map((paragraph, i) => (
-              <p key={`p-${i}`} className="text-gray-300 mb-4 leading-relaxed">
+              <p key={`p-${i}`} className="text-fg-muted mb-4 leading-relaxed">
                 {paragraph}
               </p>
             ))}
             {section.list && (
-              <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-300">
+              <ul className="list-disc pl-6 mb-4 space-y-2 text-fg-muted">
                 {section.list.map((item, i) => (
                   <li key={`l-${i}`}>{item}</li>
                 ))}
               </ul>
             )}
             {section.paragraphsAfter?.map((paragraph, i) => (
-              <p key={`pa-${i}`} className="text-gray-300 mb-4 leading-relaxed">
+              <p key={`pa-${i}`} className="text-fg-muted mb-4 leading-relaxed">
                 {paragraph}
               </p>
             ))}
             {section.listAfter && (
-              <ul className="list-disc pl-6 space-y-2 text-gray-300">
+              <ul className="list-disc pl-6 space-y-2 text-fg-muted">
                 {section.listAfter.map((item, i) => (
                   <li key={`la-${i}`}>{item}</li>
                 ))}

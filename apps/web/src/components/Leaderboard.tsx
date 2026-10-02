@@ -106,7 +106,7 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
         size: 200,
         cell: ({ getValue }) => {
           const userId = getValue() as string;
-          return <span className="font-medium text-white">{userId}</span>;
+          return <span className="font-medium text-fg">{userId}</span>;
         },
       },
       {
@@ -118,11 +118,11 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
           const { wins, losses, draws } = row.original;
           return (
             <div className="flex items-center gap-1.5 sm:gap-3">
-              <span className="text-green-400 font-bold text-xs sm:text-sm">{wins}W</span>
-              <span className="text-gray-500">-</span>
-              <span className="text-red-400 font-bold text-xs sm:text-sm">{losses}L</span>
-              <span className="text-gray-500">-</span>
-              <span className="text-gray-400 font-bold text-xs sm:text-sm">{draws}D</span>
+              <span className="text-success font-bold text-xs sm:text-sm">{wins}W</span>
+              <span className="text-fg-subtle">-</span>
+              <span className="text-danger font-bold text-xs sm:text-sm">{losses}L</span>
+              <span className="text-fg-subtle">-</span>
+              <span className="text-fg-muted font-bold text-xs sm:text-sm">{draws}D</span>
             </div>
           );
         },
@@ -138,18 +138,18 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
             <div className="flex items-center gap-2 sm:gap-3">
               {currentStreak > 0 && (
                 <div className="flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400" />
-                  <span className="text-orange-400 font-bold text-xs sm:text-sm">{currentStreak}</span>
+                  <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-ink" />
+                  <span className="text-accent-ink font-bold text-xs sm:text-sm">{currentStreak}</span>
                 </div>
               )}
               {highestStreak > 0 && (
                 <div className="flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-xs">{highestStreak}</span>
+                  <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-ink" />
+                  <span className="text-accent-ink font-bold text-xs">{highestStreak}</span>
                 </div>
               )}
               {currentStreak === 0 && highestStreak === 0 && (
-                <span className="text-gray-500 text-xs">-</span>
+                <span className="text-fg-subtle text-xs">-</span>
               )}
             </div>
           );
@@ -187,8 +187,8 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter text-white mb-1">{"LEADERBOARD"}</h1>
-              <p className="text-white/40 text-xs font-medium tracking-widest uppercase">{"Top Players & Rankings"}</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-fg mb-1">{"Leaderboard"}</h1>
+              <p className="text-fg/40 text-xs font-medium tracking-widest uppercase">{"Top Players & Rankings"}</p>
             </div>
             
             {/* Period Selector - Horizontal scroll on mobile */}
@@ -199,8 +199,8 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
                   onClick={() => handlePeriodChange(p)}
                   className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-widest transition-all whitespace-nowrap flex-shrink-0 ${
                     period === p
-                      ? 'bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                      : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/10'
+                      ? 'bg-accent text-accent-fg'
+                      : 'bg-fg/5 text-fg/60 hover:text-fg hover:bg-fg/10 border border-line'
                   }`}
                 >
                   {p === 'all-time' ? 'All Time' : p === 'weekly' ? 'Weekly' : p === 'monthly' ? 'Monthly' : 'Daily'}
@@ -211,15 +211,15 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
           
           {/* User Position Banner */}
           {session && userPosition.data && (
-            <div className="mb-4 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30">
+            <div className="mb-4 p-3 sm:p-4 rounded-xl bg-accent/20 border border-accent/30">
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-xl sm:text-2xl font-black text-white italic">#{userRank}</div>
+                <div className="text-xl sm:text-2xl font-black text-fg italic">#{userRank}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-sm sm:text-base">{"Your Rank"}</div>
-                  <div className="text-white/60 text-xs sm:text-sm truncate">
+                  <div className="text-fg font-bold text-sm sm:text-base">{"Your Rank"}</div>
+                  <div className="text-fg/60 text-xs sm:text-sm truncate">
                     {userPosition.data.user.wins}W - {userPosition.data.user.losses}L - {userPosition.data.user.draws}D
                     {userPosition.data.user.currentStreak && userPosition.data.user.currentStreak > 0 && (
-                      <span className="ml-2 text-orange-400">
+                      <span className="ml-2 text-accent-ink">
                         🔥 {`${userPosition.data.user.currentStreak} streak`}
                       </span>
                     )}
@@ -232,24 +232,23 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
       )}
       
       {/* Leaderboard Table */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-gray-900 to-black p-1">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-line bg-surface p-1">
         {/* Subtle glow */}
-        <div className="absolute -top-12 -right-12 h-32 w-32 bg-cyan-500/10 blur-[60px] animate-pulse" />
         
-        <div className="relative bg-black/40 backdrop-blur-3xl rounded-[18px] sm:rounded-[22px] p-3 sm:p-6 border border-white/5">
+        <div className="relative bg-surface rounded-[18px] sm:rounded-[22px] p-3 sm:p-6 border border-line">
           <div className="rounded-xl overflow-x-auto -mx-3 sm:mx-0">
             <div className="min-w-[600px] sm:min-w-0">
               <table className="w-full">
               <thead>
                 {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id} className="border-b border-white/10">
+                  <tr key={headerGroup.id} className="border-b border-line">
                     {headerGroup.headers.map(header => {
                       const isStreaksHeader = header.id === 'streaks';
                       return (
                         <th 
                           key={header.id} 
                           colSpan={header.colSpan}
-                          className={`px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-black text-cyan-400 uppercase tracking-widest ${
+                          className={`px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-black text-accent-ink uppercase tracking-widest ${
                             isStreaksHeader ? 'hidden sm:table-cell' : ''
                           }`}
                         >
@@ -276,12 +275,12 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
                   return (
                     <tr 
                       key={row.id} 
-                      className={`border-b border-white/5 last:border-b-0 transition-all ${
+                      className={`border-b border-line last:border-b-0 transition-all ${
                         isCurrentUser
-                          ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-l-4 border-l-cyan-400'
+                          ? 'bg-accent/20 border-l-4 border-l-cyan-400'
                           : isTopThree 
                             ? 'bg-gradient-to-r from-yellow-500/5 to-transparent hover:from-yellow-500/10' 
-                            : 'hover:bg-white/5'
+                            : 'hover:bg-fg/5'
                       }`}
                     >
                       {row.getVisibleCells().map(cell => {
@@ -293,7 +292,7 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
                           <td 
                             key={cell.id}
                             className={`px-3 sm:px-6 py-3 sm:py-4 ${
-                              isTopThree ? 'text-white' : 'text-white/90'
+                              isTopThree ? 'text-fg' : 'text-fg/90'
                             } ${isStreaksCell ? 'hidden sm:table-cell' : ''}`}
                           >
                             {isRankCell ? (
@@ -311,18 +310,18 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
                                     <ThirdPlace />
                                   </div>
                                 ) : (
-                                  <div className="text-gray-400 font-bold text-xs sm:text-sm">#{rank}</div>
+                                  <div className="text-fg-muted font-bold text-xs sm:text-sm">#{rank}</div>
                                 )}
                               </div>
                             ) : isPlayerCell ? (
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className={`font-black italic tracking-tight truncate ${
-                                  isTopThree ? 'text-white' : 'text-white/90'
+                                  isTopThree ? 'text-fg' : 'text-fg/90'
                                 }`}>
                                   {cell.getValue() as string}
                                 </span>
                                 {isTopThree && (
-                                  <span className="px-1.5 sm:px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/30 rounded text-[9px] sm:text-[10px] font-black text-yellow-400 uppercase tracking-widest flex-shrink-0">
+                                  <span className="px-1.5 sm:px-2 py-0.5 bg-accent/20 border border-accent/30 rounded text-[9px] sm:text-[10px] font-black text-accent-ink uppercase tracking-widest flex-shrink-0">
                                     {"Top 3"}
                                   </span>
                                 )}
@@ -349,34 +348,34 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 flex-wrap">
                   <button
-                    className="px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-white/10 text-white font-bold text-xs sm:text-sm min-w-[44px]"
+                    className="px-3 sm:px-4 py-2 rounded-xl bg-fg/5 hover:bg-fg/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-line text-fg font-bold text-xs sm:text-sm min-w-[44px]"
                     onClick={() => table.firstPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
                     {'<<'}
                   </button>
                   <button
-                    className="px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-white/10 text-white font-bold text-xs sm:text-sm min-w-[44px]"
+                    className="px-3 sm:px-4 py-2 rounded-xl bg-fg/5 hover:bg-fg/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-line text-fg font-bold text-xs sm:text-sm min-w-[44px]"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
                     {'<'}
                   </button>
-                  <span className="flex items-center gap-1 text-xs sm:text-sm text-gray-300 px-2">
-                    <span className="text-white/60 hidden sm:inline">{"Page"}</span>
-                    <strong className="text-white font-black">
+                  <span className="flex items-center gap-1 text-xs sm:text-sm text-fg-muted px-2">
+                    <span className="text-fg/60 hidden sm:inline">{"Page"}</span>
+                    <strong className="text-fg font-black">
                       {table.getState().pagination.pageIndex + 1} / {table.getPageCount().toLocaleString('en-US')}
                     </strong>
                   </span>
                   <button
-                    className="px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-white/10 text-white font-bold text-xs sm:text-sm min-w-[44px]"
+                    className="px-3 sm:px-4 py-2 rounded-xl bg-fg/5 hover:bg-fg/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-line text-fg font-bold text-xs sm:text-sm min-w-[44px]"
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
                   >
                     {'>'}
                   </button>
                   <button
-                    className="px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-white/10 text-white font-bold text-xs sm:text-sm min-w-[44px]"
+                    className="px-3 sm:px-4 py-2 rounded-xl bg-fg/5 hover:bg-fg/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-line text-fg font-bold text-xs sm:text-sm min-w-[44px]"
                     onClick={() => table.lastPage()}
                     disabled={!table.getCanNextPage()}
                   >
@@ -385,32 +384,32 @@ const Leaderboard = ({showHeader, showPagination, pageSize = 25}: LeaderboardPro
                 </div>
 
                 <div className="flex items-center justify-center sm:justify-end gap-2">
-                  <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">{"Show"}</span>
+                  <span className="text-xs sm:text-sm text-fg-muted hidden sm:inline">{"Show"}</span>
                   <select
                     value={table.getState().pagination.pageSize}
                     onChange={e => {
                       table.setPageSize(Number(e.target.value));
                     }}
-                    className="px-3 py-2 rounded-xl bg-white/5 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 font-medium text-xs sm:text-sm min-h-[44px]"
+                    className="px-3 py-2 rounded-xl bg-fg/5 text-fg border border-line focus:outline-none focus:ring-2 focus:ring-accent/50 font-medium text-xs sm:text-sm min-h-[44px]"
                   >
                     {[10, 20, 30, 40, 50].map(size => (
-                      <option key={size} value={size} className="bg-gray-900">
+                      <option key={size} value={size} className="bg-raised">
                         {size}
                       </option>
                     ))}
                   </select>
-                  <span className="text-xs sm:text-sm text-gray-300 hidden sm:inline">{"entries"}</span>
+                  <span className="text-xs sm:text-sm text-fg-muted hidden sm:inline">{"entries"}</span>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
-                <div className="text-gray-400 text-center sm:text-left">
-                  {"Showing"} <span className="text-white font-bold">{table.getRowModel().rows.length.toLocaleString('en-US')}</span> {"of"}{' '}
-                  <span className="text-white font-bold">{leaderboard.data?.total.toLocaleString('en-US')}</span> {"entries"}
+                <div className="text-fg-muted text-center sm:text-left">
+                  {"Showing"} <span className="text-fg font-bold">{table.getRowModel().rows.length.toLocaleString('en-US')}</span> {"of"}{' '}
+                  <span className="text-fg font-bold">{leaderboard.data?.total.toLocaleString('en-US')}</span> {"entries"}
                 </div>
                 {leaderboard.isFetching && (
-                  <div className="text-cyan-400 flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="text-accent-ink flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                     <span className="text-xs font-bold uppercase tracking-widest">{"Loading..."}</span>
                   </div>
                 )}

@@ -10,8 +10,6 @@ import { saveAnalysis } from '@/apis/games';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/useUser';
-import RightDrawer from '@/components/RightDrawer';
-import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 import { useAnalysisFormatting } from '@/hooks/useAnalysisFormatting';
 
 import { ChessboardSection } from '@/components/analysis/ChessboardSection';
@@ -19,7 +17,7 @@ import { AnalysisSection } from '@/components/analysis/AnalysisSection';
 
 function AnalysisErrorFallback() {
   return (
-    <div className='flex flex-col items-center text-white mt-20'>
+    <div className='flex flex-col items-center text-fg mt-20'>
       <div className='mb-5'>Something went wrong. Our dev team has been notified. Try reloading this page or go to the home page.</div>
       <Button className='mb-5' onClick={() => window.location.href = 'https://relaychess.com'}>{"Home"}</Button>
       <Button onClick={() => window.location.reload()}>{"Reload Site"}</Button>
@@ -246,8 +244,6 @@ export default function GameAnalysis() {
               )}
             </div>
           </div>
-          <UpdateProfileInfo />
-          <RightDrawer />
         </ErrorBoundary>
       </main>
     </>

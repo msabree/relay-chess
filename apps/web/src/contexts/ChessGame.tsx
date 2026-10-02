@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { Chess, Move } from 'chess.js';
 import {
   colorOf,
@@ -8,6 +8,7 @@ import {
   turn as boardTurn,
   type Color,
   type GameState,
+  type RoomSnapshot,
 } from '@relay-chess/game';
 import { ChatMessage, GameMove, Spectator, TEAM_COLOR, TeamInRoom, TeamMember } from '@/types';
 import useChessRoom from '@/hooks/useChessRoom';
@@ -15,6 +16,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { fromServerTimer } from '@/lib/socket';
 
 interface ChessGameContextProps {
+  /** raw server state, for components that use @relay-chess/game helpers directly */
+  game: GameState | undefined;
+  room: RoomSnapshot | undefined;
+  /** remaining ms per side right now (null when untimed) */
+  clocks: Record<Color, number> | null;
   isPrivateGame: boolean;
   roomId: string;
   isLoggedIn: boolean;
@@ -66,6 +72,9 @@ interface ChessGameContextProps {
 
 const noop = () => {};
 export const ChessGameContext = createContext<ChessGameContextProps>({
+  game: undefined,
+  room: undefined,
+  clocks: null,
   isPrivateGame: false,
   roomId: '',
   isLoggedIn: false,
@@ -193,7 +202,16 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
       promotion: mat[c].promotion,
     };
 
-  const clocks = game ? remainingMs(game, now + room.clockOffset) : null;
+  // Before the first move show the starting time; once the game ends, freeze what was on screen.
+  const frozen = useRef<Record<Color, number> | null>(null);
+  const live =
+    game && game.status === 'waiting' && game.timeControl
+      ? { w: game.timeControl.initialMs, b: game.timeControl.initialMs }
+      : game
+        ? remainingMs(game, now + room.clockOffset)
+        : null;
+  if (game?.status !== 'over') frozen.current = live;
+  const clocks = game?.status === 'over' ? (frozen.current ?? live) : live;
   const clockFor = (c: Color) => (clocks ? formatClock(clocks[c]) : '');
   const bottom: Color = myColor ?? 'w';
   const top: Color = bottom === 'w' ? 'b' : 'w';
@@ -223,6 +241,9 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
   };
 
   const value: ChessGameContextProps = {
+    game,
+    room: room.room ?? undefined,
+    clocks,
     isPrivateGame: room.room?.isPrivate ?? false,
     roomId,
     isLoggedIn,

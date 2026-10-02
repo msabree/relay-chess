@@ -48,45 +48,45 @@ export default function Matchmaking({ open, onClose, selectedTimer, isNewGame }:
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className='glass-effect border border-white/10 shadow-xl max-w-md'>
+      <DialogContent className='glass-effect border border-line shadow-xl max-w-md'>
         <DialogHeader>
-          <DialogTitle className='text-center text-2xl font-bold text-white'>
+          <DialogTitle className='text-center text-2xl font-bold text-fg'>
             Matchmaking
           </DialogTitle>
         </DialogHeader>
 
         <div className='flex flex-col items-center justify-center py-6 space-y-6'>
           <div className='animate-spin'>
-            <Loader2 className='w-12 h-12 text-cyan-400' />
+            <Loader2 className='w-12 h-12 text-accent-ink' />
           </div>
           
           <div className='text-center space-y-2'>
-            <div className='text-lg font-semibold text-white'>
+            <div className='text-lg font-semibold text-fg'>
               {matchFound ? "Match found!" : "Searching for players..."}
             </div>
-            <div className='text-sm text-gray-400'>
+            <div className='text-sm text-fg-muted'>
               {`Time Control: ${timerLabel}`}
             </div>
             {queueCount > 0 && (
-              <div className='flex items-center justify-center gap-2 text-sm text-cyan-400 mt-2'>
+              <div className='flex items-center justify-center gap-2 text-sm text-accent-ink mt-2'>
                 <Users className='w-4 h-4' />
                 <span>{`${queueCount} in queue`}</span>
               </div>
             )}
             {totalOnline > 0 && (
-              <div className='text-xs text-gray-500 mt-1'>
+              <div className='text-xs text-fg-subtle mt-1'>
                 {`${totalOnline} total online`}
               </div>
             )}
           </div>
 
           {/* New Site Notice */}
-          <div className='w-full glass-effect rounded-xl p-4 border border-cyan-400/20'>
+          <div className='w-full glass-effect rounded-xl p-4 border border-accent/20'>
             <div className='flex items-start gap-3'>
-              <Info className='w-5 h-5 text-cyan-400 mt-0.5 flex-shrink-0' />
+              <Info className='w-5 h-5 text-accent-ink mt-0.5 flex-shrink-0' />
               <div className='text-left space-y-2'>
-                <p className='text-sm font-medium text-white'>Queue may be quiet</p>
-                <p className='text-xs text-gray-300 leading-relaxed'>
+                <p className='text-sm font-medium text-fg'>Queue may be quiet</p>
+                <p className='text-xs text-fg-muted leading-relaxed'>
                   Public matchmaking needs other players online. For a full game, cancel and start a private room or team
                   lobby with friends.
                 </p>
@@ -94,7 +94,7 @@ export default function Matchmaking({ open, onClose, selectedTimer, isNewGame }:
             </div>
           </div>
 
-          <div className='text-sm text-gray-400 text-center'>
+          <div className='text-sm text-fg-muted text-center'>
             {matchFound ? "Redirecting to game..." : "This may take a few moments. You can cancel at any time."}
           </div>
         </div>

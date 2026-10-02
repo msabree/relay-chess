@@ -27,35 +27,35 @@ const LiveGamesList = () => {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-fg">
             {"Live Games"}
           </h1>
           {isConnected && (
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-              <span className="text-sm text-gray-400">{"Live"}</span>
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+              <span className="text-sm text-fg-muted">{"Live"}</span>
             </div>
           )}
         </div>
-        <p className="text-gray-400">
+        <p className="text-fg-muted">
           {"Watch games in progress and learn from top players"}
         </p>
       </div>
 
       {!isConnected ? (
-        <div className="glass-effect border border-white/10 rounded-2xl p-12 text-center">
+        <div className="glass-effect border border-line rounded-2xl p-12 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-            <span className="text-gray-400">{"Connecting..."}</span>
+            <span className="text-fg-muted">{"Connecting..."}</span>
           </div>
         </div>
       ) : liveGames.length === 0 ? (
-        <div className="glass-effect border border-white/10 rounded-2xl p-12 text-center">
-          <Eye className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-          <p className="text-gray-400 text-lg mb-2">
+        <div className="glass-effect border border-line rounded-2xl p-12 text-center">
+          <Eye className="w-16 h-16 mx-auto mb-4 text-fg-subtle" />
+          <p className="text-fg-muted text-lg mb-2">
             {"No active games at the moment"}
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-fg-subtle text-sm">
             {"Start a game to see it here!"}
           </p>
         </div>
@@ -65,20 +65,20 @@ const LiveGamesList = () => {
             <button
               key={game.roomId}
               onClick={() => handleSpectateGame(game.roomId)}
-              className="glass-effect border border-white/10 rounded-xl p-6 hover:border-cyan-400/50 hover:bg-white/5 transition-all duration-200 text-left group"
+              className="glass-effect border border-line rounded-xl p-6 hover:border-accent/50 hover:bg-fg/5 transition-all duration-200 text-left group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full border-2 ${
                     game.currentTurn === 'w' 
-                      ? 'bg-white border-white' 
-                      : 'bg-gray-800 border-gray-600'
+                      ? 'bg-surface border-line' 
+                      : 'bg-raised border-line'
                   }`} />
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm text-fg-muted">
                     {`${game.currentTurn === 'w' ? 'White' : 'Black'} to move`}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 text-cyan-400">
+                <div className="flex items-center gap-1 text-accent-ink">
                   <Eye className="w-4 h-4" />
                   <span className="text-sm font-medium">{game.spectatorCount}</span>
                 </div>
@@ -86,16 +86,16 @@ const LiveGamesList = () => {
 
               <div className="space-y-3">
                 <div>
-                  <div className="text-white font-semibold mb-1 text-sm">
+                  <div className="text-fg font-semibold mb-1 text-sm">
                     {`White: ${formatPlayers(game.whiteTeam.usernames)}`}
                   </div>
-                  <div className="text-gray-500 text-xs mb-1 text-center">{"vs"}</div>
-                  <div className="text-white font-semibold text-sm">
+                  <div className="text-fg-subtle text-xs mb-1 text-center">{"vs"}</div>
+                  <div className="text-fg font-semibold text-sm">
                     {`Black: ${formatPlayers(game.blackTeam.usernames)}`}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-sm text-gray-400 pt-2 border-t border-white/5">
+                <div className="flex items-center gap-4 text-sm text-fg-muted pt-2 border-t border-line">
                   <div className="flex items-center gap-1.5">
                     <Move className="w-4 h-4" />
                     <span>{`${game.moveCount} moves`}</span>
@@ -106,18 +106,18 @@ const LiveGamesList = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between text-xs text-fg-subtle pt-2 border-t border-line">
                   <div className="flex items-center gap-2">
-                    <span className="text-white/60">W:</span>
+                    <span className="text-fg/60">W:</span>
                     <span>{formatTimeRemaining(game.timer.white)}</span>
-                    <span className="text-white/60">B:</span>
+                    <span className="text-fg/60">B:</span>
                     <span>{formatTimeRemaining(game.timer.black)}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-fg-subtle">
                   <span>{formatRelativeTime(game.lastMoveAt)}</span>
-                  <div className="flex items-center gap-1 text-cyan-400 group-hover:text-cyan-300 transition-colors">
+                  <div className="flex items-center gap-1 text-accent-ink group-hover:text-accent-ink transition-colors">
                     <Play className="w-3 h-3" />
                     <span className="font-medium">{"Watch"}</span>
                   </div>

@@ -39,6 +39,12 @@ export const GAME_OVER = 'game-over';
 // BOARD COLORS
 export const BOARD_COLOR_SCHEMES = [
   {
+    value: 'slate',
+    labelKey: 'slate' as const,
+    dark: '#7E95A3',
+    light: '#DCE1E4'
+  },
+  {
     value: 'blue-white',
     labelKey: 'blueWhite' as const,
     dark: '#60688e',

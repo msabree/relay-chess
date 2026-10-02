@@ -11,10 +11,10 @@ export default function Custom404() {
         <title>{"404 - Page Not Found | Relay Chess"}</title>
       </Head>
       <div className='flex flex-col justify-center content-center'>
-        <div className='z-10 m-auto text-4xl bold justify-center text-white mb-10 mt-10'>{"404 - Page Not Found"}</div>
+        <div className='z-10 m-auto text-4xl bold justify-center text-fg mb-10 mt-10'>{"404 - Page Not Found"}</div>
         <div className='m-auto'>
           <Link href={'/'}>
-            <Button className='text-white text-2xl mt-5'>
+            <Button className='text-fg text-2xl mt-5'>
               {"Go Home"}
             </Button>
           </Link>

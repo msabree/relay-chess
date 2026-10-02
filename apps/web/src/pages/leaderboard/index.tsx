@@ -1,9 +1,6 @@
 import Head from 'next/head';
 import NavigationBar from '@/components/NavigationBar';
-import RightDrawer from '@/components/RightDrawer';
 import Leaderboard from '@/components/Leaderboard';
-import SignInModal from '@/modals/SignIn';
-import UpdateProfileInfo from '@/modals/UpdateProfileInfo';
 
 export default function LeaderboardPage() {
   return (
@@ -16,9 +13,6 @@ export default function LeaderboardPage() {
       </Head>
       <NavigationBar />
       <Leaderboard showHeader={true} showPagination={true} />
-      <RightDrawer />
-      <UpdateProfileInfo />
-      <SignInModal />
     </>
   );
 }

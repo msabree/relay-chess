@@ -26,47 +26,47 @@ export const MoveBadge = ({ feedback, isOpening = false, className = '' }: MoveB
     best: {
       icon: isOpening ? BookOpen : Sparkles,
       label: isOpening ? "Book" : "Brilliant",
-      color: 'text-cyan-400',
+      color: 'text-accent-ink',
       glow: 'shadow-[0_0_20px_rgba(6,182,212,0.6)]',
-      bg: 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20',
-      border: 'border-cyan-400/50',
-      iconColor: 'text-cyan-400'
+      bg: 'bg-accent/20',
+      border: 'border-accent/50',
+      iconColor: 'text-accent-ink'
     },
     good: {
       icon: Zap,
       label: "Great",
-      color: 'text-blue-400',
+      color: 'text-accent-ink',
       glow: 'shadow-[0_0_15px_rgba(59,130,246,0.5)]',
-      bg: 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20',
-      border: 'border-blue-400/50',
-      iconColor: 'text-blue-400'
+      bg: 'bg-accent/20',
+      border: 'border-accent/50',
+      iconColor: 'text-accent-ink'
     },
     unexpected: {
       icon: AlertTriangle,
       label: "Inaccuracy",
-      color: 'text-yellow-400',
+      color: 'text-accent-ink',
       glow: 'shadow-[0_0_10px_rgba(250,204,21,0.4)]',
-      bg: 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20',
-      border: 'border-yellow-400/50',
-      iconColor: 'text-yellow-400'
+      bg: 'bg-accent/20',
+      border: 'border-accent/50',
+      iconColor: 'text-accent-ink'
     },
     mistake: {
       icon: AlertTriangle,
       label: "Mistake",
-      color: 'text-orange-400',
+      color: 'text-accent-ink',
       glow: 'shadow-[0_0_10px_rgba(251,146,60,0.4)]',
-      bg: 'bg-gradient-to-r from-orange-500/20 to-red-500/20',
+      bg: 'bg-accent/20',
       border: 'border-orange-400/50',
-      iconColor: 'text-orange-400'
+      iconColor: 'text-accent-ink'
     },
     blunder: {
       icon: X,
       label: "Blunder",
-      color: 'text-red-500',
+      color: 'text-danger',
       glow: 'shadow-[0_0_20px_rgba(239,68,68,0.6)]',
-      bg: 'bg-gradient-to-r from-red-500/20 to-pink-500/20',
-      border: 'border-red-400/50',
-      iconColor: 'text-red-500'
+      bg: 'bg-accent/20',
+      border: 'border-danger/50',
+      iconColor: 'text-danger'
     }
   };
 
@@ -76,12 +76,12 @@ export const MoveBadge = ({ feedback, isOpening = false, className = '' }: MoveB
   const Icon = config.icon;
 
   return (
-    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm ${config.bg} ${config.border} ${config.glow} ${className} transition-all duration-300 hover:scale-105`}>
+    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm ${config.bg} ${config.border} ${config.glow} ${className} transition-all duration-300`}>
       <Icon className={`h-5 w-5 ${config.iconColor} ${feedback === 'best' ? 'animate-pulse' : ''}`} />
       <span className={`font-black text-xs tracking-widest uppercase ${config.color}`}>
         {config.label}
       </span>
-      {feedback === 'blunder' && <span className="text-red-400">⚠️</span>}
+      {feedback === 'blunder' && <span className="text-danger">⚠️</span>}
     </div>
   );
 };
