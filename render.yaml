@@ -1,33 +1,57 @@
-# Render Blueprint: the Relay Chess server (HTTP API + socket.io).
-# The web app deploys separately on Vercel (see DEPLOY.md).
+# Render Blueprint: the Relay Chess server (HTTP API + socket.io), staging and production.
+#   main -> relay-chess-server-stage (stage-api.relaychess.com)
+#   prod -> relay-chess-server       (api.relaychess.com)
+# The web app deploys on Vercel (see DEPLOY.md).
+
+x-server: &server
+  type: web
+  runtime: node
+  region: oregon
+  # Deploy after a push to the branch, but only once GitHub checks (CI) pass.
+  autoDeployTrigger: checksPass
+  buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
+  startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
+  healthCheckPath: /health
+  # Games live in memory, so keep exactly one instance.
+  numInstances: 1
+  buildFilter:
+    paths:
+      - apps/server/**
+      - packages/game/**
+      - pnpm-lock.yaml
+      - render.yaml
+
 services:
-  - type: web
-    name: relay-chess-server
-    runtime: node
-    plan: starter # always on: a sleeping server drops live games
-    region: oregon
+  - <<: *server
+    name: relay-chess-server-stage
     branch: main
-    # Deploy after a push to main, but only once GitHub checks (CI) pass.
-    autoDeployTrigger: checksPass
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
-    startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
-    healthCheckPath: /health
-    # Games live in memory, so keep exactly one instance.
-    numInstances: 1
-    buildFilter:
-      paths:
-        - apps/server/**
-        - packages/game/**
-        - pnpm-lock.yaml
-        - render.yaml
+    plan: free # sleeping is fine on staging
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: AUTH_SECRET # same value as AUTH_SECRET on Vercel
+      - key: AUTH_SECRET # same value as Vercel's Preview AUTH_SECRET; different from prod
         sync: false
       - key: MONGODB_URL
         sync: false
-      - key: DATABASE_NAME # use the existing database name so accounts carry over
+      - key: DATABASE_NAME # a separate database, e.g. relaychess_stage
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://stage.relaychess.com
+      - key: GUEST_LOGIN
+        value: "true"
+
+  - <<: *server
+    name: relay-chess-server
+    branch: prod
+    plan: starter # always on: a sleeping server drops live games
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AUTH_SECRET # same value as Vercel's Production AUTH_SECRET
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: DATABASE_NAME # the existing database, so users and the leaderboard carry over
         sync: false
       - key: CORS_ORIGINS
         value: https://relaychess.com,https://www.relaychess.com

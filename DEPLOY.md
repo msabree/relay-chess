@@ -1,52 +1,73 @@
 # Deploying Relay Chess
 
-Two pieces, both deploy automatically when a PR is merged to `main`:
+Two environments, one branch each:
 
-| Piece | Host | Deploys when |
-|---|---|---|
-| `apps/server` (API + sockets) | Render web service, from `render.yaml` | `main` changes in `apps/server`, `packages/game` or the lockfile, and CI passes |
-| `apps/web` | Vercel | `main` changes in `apps/web`, `packages/game` or the lockfile |
+| Branch | Environment | Web (Vercel) | Server (Render) | Database |
+|---|---|---|---|---|
+| `main` | staging | stage.relaychess.com | stage-api.relaychess.com | `relaychess_stage` |
+| `prod` | production | relaychess.com | api.relaychess.com | existing database |
 
-Data lives in MongoDB (Atlas). There is no Redis: live games are held in the server's memory, so the server runs as **one always-on instance**.
+**Flow:** feature branch → PR into `main` (deploys to staging) → check staging → PR `main` → `prod` (deploys to production).
+
+There is no Redis: live games are held in the server's memory, so each server runs as **one instance**. Production is always on; staging may sleep.
 
 ## One-time setup
 
-### 1. Render (server)
-1. Render dashboard → **New → Blueprint** → pick this repo. It reads `render.yaml`.
-2. Fill in the secret env vars it asks for:
-   - `AUTH_SECRET`: `openssl rand -base64 48`. Keep it, Vercel needs the same value.
-   - `MONGODB_URL`: Atlas connection string (with a freshly rotated password).
-   - `DATABASE_NAME`: the existing database name (the old API's `DATABASE_NAME`), so users and the leaderboard carry over.
-3. Add a custom domain, e.g. `api.relaychess.com`.
-4. Check `https://api.relaychess.com/health` returns `{"ok":true,"store":"mongo"}`.
+### 1. Branches
+```bash
+git checkout main && git pull
+git branch prod && git push -u origin prod
+```
 
-If Render rejects `autoDeployTrigger`, swap it for `autoDeploy: true` (deploys on every push to `main`, without waiting for CI).
+### 2. Render (servers)
+1. Dashboard → **New → Blueprint** → pick this repo. It creates both services from `render.yaml`.
+2. Fill in each service's secrets. Use **different values per environment**:
+   - `AUTH_SECRET`: `openssl rand -base64 48`
+   - `MONGODB_URL`: Atlas connection string (freshly rotated password). Same cluster is fine.
+   - `DATABASE_NAME`: staging `relaychess_stage`; production the old API's `DATABASE_NAME` so accounts carry over.
+3. Custom domains: `stage-api.relaychess.com` on the stage service, `api.relaychess.com` on production.
+4. Check `/health` on both returns `{"ok":true,"store":"mongo"}`.
 
-If the build can't run `corepack enable`, change the build command to
-`npm i -g pnpm@9.15.4 && pnpm install --frozen-lockfile --filter @relay-chess/server...`.
+### 3. Vercel (web), reusing the existing project
+1. Settings → Git: connect this repo. **Production Branch: `prod`.**
+2. Settings → Build & Deployment: **Root Directory `apps/web`**.
+3. Settings → Domains:
+   - `relaychess.com` and `www.relaychess.com` → production.
+   - Add `stage.relaychess.com` and set its **Git branch to `main`**.
+4. Settings → Environment Variables. Delete the old `NEXT_PUBLIC_*_SECRET`, `NEXT_PUBLIC_CHESS_SERVER_*`, `CHESS_SERVER_API` and `NEXT_PUBLIC_USE_TEST_USERS`. Then add:
 
-### 2. Vercel (web)
-1. New project → import this repo → **Root Directory: `apps/web`**. Framework: Next.js. Vercel detects pnpm.
-2. Production branch: `main`.
-3. Env vars (Production and Preview):
-   - `NEXT_PUBLIC_SERVER_URL=https://api.relaychess.com`
-   - `AUTH_SECRET` = same as Render
-   - `NEXTAUTH_URL=https://relaychess.com`
-   - `NEXTAUTH_SECRET` = `openssl rand -base64 32`
-   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` (server-only, no `NEXT_PUBLIC_`)
-   - optional `NEXT_PUBLIC_GA_ID`
-4. Add `relaychess.com` and `www.relaychess.com` as domains once the preview checks out.
+   | Variable | Production | Preview (branch `main`) |
+   |---|---|---|
+   | `NEXT_PUBLIC_SERVER_URL` | `https://api.relaychess.com` | `https://stage-api.relaychess.com` |
+   | `AUTH_SECRET` | prod Render value | stage Render value |
+   | `NEXTAUTH_URL` | `https://relaychess.com` | `https://stage.relaychess.com` |
+   | `NEXTAUTH_SECRET` | `openssl rand -base64 32` | a different one |
+   | `GOOGLE_CLIENT_ID` / `_SECRET` | same in both | same in both |
+   | `APPLE_CLIENT_ID` / `_SECRET` | same in both | same in both |
+   | `NEXT_PUBLIC_GA_ID` | optional | leave empty |
 
-### 3. GitHub
-Settings → Branches → protect `main`: require the **CI** check and a PR. That makes "merge to main" the only way to deploy, and Render waits for CI before deploying.
+   Scope the Preview values to the `main` branch.
+5. Google Cloud console → OAuth client → add `https://stage.relaychess.com/api/auth/callback/google` as a redirect URI. Apple needs `stage.relaychess.com` added to the Service ID's domains and return URLs if you want Apple sign-in on staging.
 
-## Cutover checklist
-- [ ] Preview deploy works: sign in with Google, your old username and leaderboard spot show up (proves `DATABASE_NAME` is right).
-- [ ] Private game with a second browser as a guest; quick match with 4 tabs.
-- [ ] Move `relaychess.com` to the new Vercel project.
+### 4. GitHub
+Settings → Branches → protect `main` and `prod`: require a PR and the **CI** check. Merging is then the only way to deploy, and Render waits for CI.
+
+## Releasing
+1. Merge PRs into `main`. Staging updates.
+2. Try it on stage.relaychess.com.
+3. Open a PR from `main` into `prod` and merge it. Production updates.
+
+Deploys restart the server, which ends games in progress, so release production when it's quiet.
+
+## First cutover
+- [ ] Staging works end to end (sign in, private game, quick match with 4 tabs).
+- [ ] First `main` → `prod` merge. On production, sign in and confirm your old username and leaderboard spot (proves `DATABASE_NAME`).
 - [ ] Delete the old Render services: chess sockets, api, redis.
-- [ ] Old iOS app: it talks to the old API, so pull it from the store (or keep the old API up until you do).
+- [ ] Old iOS app talks to the old API: pull it from the store (or keep the old API up until you do).
 
-## Notes
-- Deploys restart the server, which ends games in progress. Merge when it's quiet.
-- Render sets `PORT`; the server reads it.
+## If Render complains
+- `autoDeployTrigger` rejected: use `autoDeploy: true` (deploys on every push, without waiting for CI).
+- YAML anchors (`x-server`, `<<:`) rejected: copy the shared keys into both services.
+- `corepack enable` fails: build with `npm i -g pnpm@9.15.4 && pnpm install --frozen-lockfile --filter @relay-chess/server...`.
+
+Render sets `PORT`; the server reads it.

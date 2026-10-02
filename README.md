@@ -43,7 +43,7 @@ Tests: `pnpm test` (rules engine + server integration tests). Typecheck: `pnpm t
 
 ## Deploying
 
-The server runs on Render (`render.yaml`) and the web app on Vercel. Both deploy on merge to `main`. See [DEPLOY.md](DEPLOY.md).
+`main` deploys to staging and `prod` to production: the server on Render (`render.yaml`), the web app on Vercel. See [DEPLOY.md](DEPLOY.md).
 
 ## Roadmap
 
