@@ -15,7 +15,6 @@ export default function ServerSidePage({ roomId: _roomId }: ServerSidePageProps)
         <title>{"Game Analysis - Relay Chess"}</title>
         <meta name="description" content={"Review your 2v2 chess game with computer analysis, move feedback, and team synergy metrics."} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
       <ClientPage />
     </>

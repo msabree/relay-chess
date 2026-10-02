@@ -13,7 +13,6 @@ export default function PrivacyPolicy() {
         <title>{"Privacy Policy - Relay Chess"}</title>
         <meta name="description" content={"Protecting your private information is our priority. This Privacy Policy governs how Relay Chess collects and uses your data."} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <NavigationBar />
