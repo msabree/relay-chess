@@ -41,6 +41,10 @@ To keep data between restarts, run `docker compose up -d` and set `MONGODB_URL=m
 
 Tests: `pnpm test` (rules engine + server integration tests). Typecheck: `pnpm typecheck`.
 
+## Deploying
+
+The server runs on Render (`render.yaml`) and the web app on Vercel. Both deploy on merge to `main`. See [DEPLOY.md](DEPLOY.md).
+
 ## Roadmap
 
 1. New game screen and private room screen.

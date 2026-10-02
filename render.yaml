@@ -1,0 +1,35 @@
+# Render Blueprint: the Relay Chess server (HTTP API + socket.io).
+# The web app deploys separately on Vercel (see DEPLOY.md).
+services:
+  - type: web
+    name: relay-chess-server
+    runtime: node
+    plan: starter # always on: a sleeping server drops live games
+    region: oregon
+    branch: main
+    # Deploy after a push to main, but only once GitHub checks (CI) pass.
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
+    startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
+    healthCheckPath: /health
+    # Games live in memory, so keep exactly one instance.
+    numInstances: 1
+    buildFilter:
+      paths:
+        - apps/server/**
+        - packages/game/**
+        - pnpm-lock.yaml
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AUTH_SECRET # same value as AUTH_SECRET on Vercel
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: DATABASE_NAME # use the existing database name so accounts carry over
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://relaychess.com,https://www.relaychess.com
+      - key: GUEST_LOGIN
+        value: "true"

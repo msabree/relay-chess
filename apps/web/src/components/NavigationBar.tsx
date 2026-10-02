@@ -36,7 +36,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean; hideSignIn?: bo
     <>
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
         <div className={`mx-auto flex h-14 items-center justify-between gap-4 px-4 ${compact ? 'max-w-[1400px]' : 'max-w-6xl'}`}>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-10">
             <Link href={home} className="rounded-md" aria-label="Relay Chess home">
               <Logo />
             </Link>
