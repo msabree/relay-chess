@@ -1,0 +1,14 @@
+{
+  "name": "relay-chess",
+  "private": true,
+  "description": "2v2 relay chess. Teammates alternate moves on one board.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.4",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
