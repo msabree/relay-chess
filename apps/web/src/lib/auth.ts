@@ -1,29 +1,21 @@
 import { SERVER_URL } from '@/constants';
 
 /**
- * Session with the Relay Chess server.
- * - Signed in with Google/Apple: /api/token mints a short-lived identity token,
- *   the server exchanges it for an access token tied to the account.
- * - Not signed in: the server hands out a guest token.
- * The access token is kept in localStorage so guests keep their id across reloads.
+ * Your player identity. There are no accounts: the server hands out a random
+ * id and nickname, and the browser keeps the token for 30 days.
  */
 export interface Me {
   id: string;
   username: string;
-  boardColor: string | null;
-  guest: boolean;
-  email?: string;
 }
 interface Stored {
   token: string;
   user: Me;
-  /** email the token belongs to; null for guests */
-  email: string | null;
 }
 
-const KEY = 'relaychess.auth';
+const KEY = 'relaychess.player';
 let cache: Stored | null = null;
-let inflight: { email: string | null; promise: Promise<Stored> } | null = null;
+let inflight: Promise<Stored> | null = null;
 const listeners = new Set<() => void>();
 
 const read = (): Stored | null => {
@@ -37,12 +29,11 @@ const read = (): Stored | null => {
   return cache;
 };
 
-const write = (s: Stored | null) => {
-  const changed = s?.token !== cache?.token;
+const write = (s: Stored) => {
+  const changed = s.token !== cache?.token;
   cache = s;
   try {
-    if (s) window.localStorage.setItem(KEY, JSON.stringify(s));
-    else window.localStorage.removeItem(KEY);
+    window.localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     /* storage disabled: memory only */
   }
@@ -58,52 +49,28 @@ const expired = (token: string) => {
   }
 };
 
-async function post<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${SERVER_URL}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
-  return res.json() as Promise<T>;
-}
-
-async function login(email: string | null): Promise<Stored> {
-  if (email) {
-    const idRes = await fetch('/api/token');
-    if (!idRes.ok) throw new Error('could not get identity token');
-    const { token: identity } = (await idRes.json()) as { token: string };
-    const { token, user } = await post<{ token: string; user: Me }>('/auth/exchange', { token: identity });
-    return { token, user, email };
-  }
-  const { token, user } = await post<{ token: string; user: Me }>('/auth/guest');
-  return { token, user, email: null };
-}
-
-/** Make sure we hold a token for this email (or a guest token when null). */
-export async function ensureAuth(email: string | null): Promise<Stored> {
+/** Make sure we hold a valid player token, asking the server for one if needed. */
+export async function ensurePlayer(): Promise<Stored> {
   const current = read();
-  if (current && current.email === email && !expired(current.token)) return current;
-  if (inflight?.email === email) return inflight.promise;
-  const promise = login(email)
-    .then((s) => (write(s), s))
+  if (current && !expired(current.token)) return current;
+  if (inflight) return inflight;
+  inflight = fetch(`${SERVER_URL}/players`, { method: 'POST' })
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`could not start a player session (${res.status})`);
+      const s = (await res.json()) as Stored;
+      write(s);
+      return s;
+    })
     .finally(() => (inflight = null));
-  inflight = { email, promise };
-  return promise;
+  return inflight;
 }
 
 export const getToken = () => read()?.token ?? null;
-export const getMe = () => read()?.user ?? null;
 
-/** After a profile change the server returns a fresh token with the new name. */
-export function updateAuth(token: string, user: Me) {
-  const current = read();
-  write({ token, user, email: current?.email ?? null });
-}
+/** After a rename the server returns a fresh token with the new name. */
+export const setPlayer = (token: string, user: Me) => write({ token, user });
 
-export const clearAuth = () => write(null);
-
-/** Called when the token changes (sign in, sign out, rename). */
+/** Called when the token changes (new player, rename). */
 export function onAuthChange(fn: () => void) {
   listeners.add(fn);
   return () => void listeners.delete(fn);

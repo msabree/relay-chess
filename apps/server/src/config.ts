@@ -9,10 +9,6 @@ const schema = z.object({
     .string()
     .default('http://localhost:3000')
     .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
-  GUEST_LOGIN: z
-    .string()
-    .default('true')
-    .transform((v) => v !== 'false'),
 });
 
 export type Config = z.infer<typeof schema>;

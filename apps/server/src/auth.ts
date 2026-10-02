@@ -1,22 +1,28 @@
 import { randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
-/** Who is making a request. Guests have a random id and are never on the leaderboard. */
+/**
+ * Who is making a request. There are no accounts: everyone gets a random id
+ * and a nickname, remembered by their browser for 30 days.
+ */
 export interface Identity {
   id: string;
   name: string;
+  /** always true today; kept so accounts can come back without a protocol change */
   guest: boolean;
 }
 
 const ISSUER = 'relay-chess-server';
-const ACCESS_AUDIENCE = 'relay-chess';
-/** Tokens minted by apps/web after an OAuth sign-in, exchanged at POST /auth/exchange. */
-export const IDENTITY_AUDIENCE = 'relay-chess-identity';
+const AUDIENCE = 'relay-chess';
+
+/** Letters, numbers, spaces, _ and -. 2 to 20 characters. */
+export const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
+export const cleanNickname = (raw: string) => raw.trim().replace(/\s+/g, ' ');
 
 export function signAccessToken(secret: string, who: Identity): string {
   return jwt.sign({ name: who.name, guest: who.guest }, secret, {
     subject: who.id,
-    audience: ACCESS_AUDIENCE,
+    audience: AUDIENCE,
     issuer: ISSUER,
     expiresIn: '30d',
   });
@@ -24,37 +30,21 @@ export function signAccessToken(secret: string, who: Identity): string {
 
 export function verifyAccessToken(secret: string, token: string): Identity | null {
   try {
-    const p = jwt.verify(token, secret, { audience: ACCESS_AUDIENCE, issuer: ISSUER }) as jwt.JwtPayload;
+    const p = jwt.verify(token, secret, { audience: AUDIENCE, issuer: ISSUER }) as jwt.JwtPayload;
     if (typeof p.sub !== 'string' || typeof p.name !== 'string') return null;
-    return { id: p.sub, name: p.name, guest: p.guest === true };
+    return { id: p.sub, name: p.name, guest: true };
   } catch {
     return null;
   }
-}
-
-/** Verify a short-lived identity token from apps/web. Returns the signed-in email. */
-export function verifyIdentityToken(secret: string, token: string): { email: string; name?: string } | null {
-  try {
-    const p = jwt.verify(token, secret, { audience: IDENTITY_AUDIENCE, maxAge: '10m' }) as jwt.JwtPayload;
-    if (typeof p.email !== 'string' || !p.email.includes('@')) return null;
-    return { email: p.email.toLowerCase(), name: typeof p.name === 'string' ? p.name : undefined };
-  } catch {
-    return null;
-  }
-}
-
-/** Used by apps/web (and tests) to mint identity tokens. */
-export function signIdentityToken(secret: string, email: string, name?: string): string {
-  return jwt.sign({ email, name }, secret, { audience: IDENTITY_AUDIENCE, expiresIn: '5m' });
 }
 
 const ADJECTIVES = ['Bold', 'Calm', 'Clever', 'Daring', 'Eager', 'Fuzzy', 'Gentle', 'Happy', 'Jolly', 'Keen', 'Lucky', 'Mellow', 'Nimble', 'Plucky', 'Quiet', 'Rapid', 'Sly', 'Sunny', 'Swift', 'Witty'];
 const ANIMALS = ['Badger', 'Bison', 'Crane', 'Falcon', 'Ferret', 'Fox', 'Gecko', 'Heron', 'Ibex', 'Koala', 'Lynx', 'Marten', 'Moose', 'Newt', 'Otter', 'Owl', 'Panda', 'Raven', 'Seal', 'Yak'];
 const pick = (xs: string[]) => xs[randomBytes(1)[0]! % xs.length]!;
 
-/** Guests get a friendly random name like "Plucky Otter". */
+/** A new player with a friendly random name like "Plucky Otter". */
 export function newGuest(): Identity {
-  const id = `guest_${randomBytes(9).toString('base64url')}`;
+  const id = `p_${randomBytes(9).toString('base64url')}`;
   return { id, name: `${pick(ADJECTIVES)} ${pick(ANIMALS)}`, guest: true };
 }
 

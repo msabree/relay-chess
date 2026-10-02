@@ -1,111 +1,74 @@
-import type { LeaderboardEntry, Store, WinLossDraw } from './store/types';
+import type { Period, Store } from './store/types';
 
+/**
+ * Just-for-fun leaderboards: today and this week. They reset on their own when
+ * the day or week rolls over (UTC), and old buckets expire from the database.
+ */
 export type Outcome = 'win' | 'loss' | 'draw';
-export type Period = 'all-time' | 'daily' | 'weekly' | 'monthly';
-export const PERIODS: Period[] = ['all-time', 'daily', 'weekly', 'monthly'];
+export const PERIODS: Period[] = ['daily', 'weekly'];
 
 const pad = (n: number) => String(n).padStart(2, '0');
+const DAY = 86_400_000;
 
-/** UTC bucket keys. Week numbering matches the legacy API so old buckets line up. */
-export function bucketKeys(date: Date) {
-  const y = date.getUTCFullYear();
-  const startOfYear = new Date(Date.UTC(y, 0, 1));
-  const days = Math.floor((date.getTime() - startOfYear.getTime()) / 86_400_000);
-  const week = Math.ceil((days + startOfYear.getUTCDay() + 1) / 7);
-  return {
-    daily: `${y}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`,
-    weekly: `${y}-W${pad(week)}`,
-    monthly: `${y}-${pad(date.getUTCMonth() + 1)}`,
-  };
+/** Bucket key and when the bucket ends, in UTC. Weeks start on Monday. */
+export function bucket(period: Period, at: Date): { key: string; endsAt: Date } {
+  const day = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
+  if (period === 'daily') {
+    const d = new Date(day);
+    return { key: `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, endsAt: new Date(day + DAY) };
+  }
+  const monday = day - ((new Date(day).getUTCDay() + 6) % 7) * DAY;
+  const m = new Date(monday);
+  return { key: `week-of-${m.getUTCFullYear()}-${pad(m.getUTCMonth() + 1)}-${pad(m.getUTCDate())}`, endsAt: new Date(monday + 7 * DAY) };
 }
 
-const empty = (): WinLossDraw => ({ wins: 0, losses: 0, draws: 0 });
-const add = (s: WinLossDraw | undefined, o: Outcome): WinLossDraw => {
-  const r = { ...empty(), ...s };
-  if (o === 'win') r.wins++;
-  else if (o === 'loss') r.losses++;
-  else r.draws++;
-  return r;
-};
-
-/** Pure: next leaderboard entry after one game. */
-export function applyOutcome(
-  prev: LeaderboardEntry | null,
-  user: { userId: string; username: string },
-  outcome: Outcome,
-  at: Date,
-): LeaderboardEntry {
-  const keys = bucketKeys(at);
-  const base: LeaderboardEntry = prev ?? {
-    userId: user.userId,
-    username: user.username,
-    gamesPlayed: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
-    currentStreak: 0,
-    highestStreak: 0,
-    daily: {},
-    weekly: {},
-    monthly: {},
-  };
-  const totals = add(base, outcome);
-  const currentStreak = outcome === 'win' ? base.currentStreak + 1 : outcome === 'loss' ? 0 : base.currentStreak;
-  return {
-    ...base,
-    ...totals,
-    username: user.username,
-    gamesPlayed: base.gamesPlayed + 1,
-    currentStreak,
-    highestStreak: Math.max(base.highestStreak, currentStreak),
-    daily: { ...base.daily, [keys.daily]: add(base.daily?.[keys.daily], outcome) },
-    weekly: { ...base.weekly, [keys.weekly]: add(base.weekly?.[keys.weekly], outcome) },
-    monthly: { ...base.monthly, [keys.monthly]: add(base.monthly?.[keys.monthly], outcome) },
-  };
-}
-
-export async function recordOutcomes(
-  store: Store,
-  results: { userId: string; username: string; outcome: Outcome }[],
-  at = new Date(),
-) {
-  for (const r of results) {
-    const prev = await store.getLeaderboardEntry(r.userId);
-    await store.putLeaderboardEntry(applyOutcome(prev, r, r.outcome, at));
+export async function recordOutcomes(store: Store, results: { userId: string; username: string; outcome: Outcome }[], at = new Date()) {
+  for (const period of PERIODS) {
+    const { key, endsAt } = bucket(period, at);
+    // keep a finished bucket around for a day, then let the database drop it
+    const expiresAt = new Date(endsAt.getTime() + DAY);
+    for (const r of results) {
+      await store.addScore({ period, key, userId: r.userId, name: r.username, outcome: r.outcome, expiresAt });
+    }
   }
 }
 
-export interface LeaderboardRow extends LeaderboardEntry {
+export interface LeaderboardRow {
   _rank: number;
   _userId: string;
+  userId: string;
+  username: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  gamesPlayed: number;
 }
 
-/** Ranked rows for a period, most wins first. Entries with no games in the period are dropped. */
 async function ranked(store: Store, period: Period, now: Date): Promise<LeaderboardRow[]> {
-  const all = await store.allLeaderboardEntries();
-  const keys = bucketKeys(now);
-  const rows = all
-    .map((e) => {
-      const stats = period === 'all-time' ? e : (e[period]?.[keys[period]] ?? empty());
-      return { ...e, wins: stats.wins, losses: stats.losses, draws: stats.draws };
-    })
-    .filter((e) => period === 'all-time' || e.wins + e.losses + e.draws > 0)
-    .sort((a, b) => b.wins - a.wins || a.userId.localeCompare(b.userId));
-  return rows.map((e, i) => ({ ...e, _rank: i + 1, _userId: e.username || e.userId }));
+  const rows = await store.listScores(period, bucket(period, now).key);
+  return rows
+    .sort((a, b) => b.wins - a.wins || a.losses - b.losses || a.userId.localeCompare(b.userId))
+    .map((s, i) => ({
+      _rank: i + 1,
+      _userId: s.name,
+      userId: s.userId,
+      username: s.name,
+      wins: s.wins,
+      losses: s.losses,
+      draws: s.draws,
+      gamesPlayed: s.wins + s.losses + s.draws,
+    }));
 }
 
 export async function leaderboardPage(store: Store, period: Period, page: number, pageSize: number, now = new Date()) {
   const rows = await ranked(store, period, now);
-  return { rows: rows.slice(page * pageSize, page * pageSize + pageSize), page, total: rows.length, period };
+  const { endsAt } = bucket(period, now);
+  return { rows: rows.slice(page * pageSize, page * pageSize + pageSize), page, total: rows.length, period, resetsAt: endsAt.toISOString() };
 }
 
 export async function leaderboardPosition(store: Store, userId: string, period: Period, now = new Date()) {
   const rows = await ranked(store, period, now);
   const i = rows.findIndex((r) => r.userId === userId);
   if (i < 0) return null;
-  return {
-    rank: i + 1,
-    user: rows[i],
-    surrounding: { above: rows.slice(Math.max(0, i - 2), i), below: rows.slice(i + 1, i + 3) },
-  };
+  return { rank: i + 1, user: rows[i], surrounding: { above: rows.slice(Math.max(0, i - 2), i), below: rows.slice(i + 1, i + 3) } };
 }

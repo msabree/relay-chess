@@ -9,91 +9,55 @@ type LegalSection = {
 const PRIVACY_LEGAL = {
   title: "Privacy",
   titleAccent: "Policy",
-  lastUpdated: "Last Updated: June 1, 2025",
-  intro: "Protecting your private information is our priority. This Privacy Policy applies to Relay Chess and governs how we collect and use your data. By using Relay Chess, you consent to the data practices described in this policy.",
+  lastUpdated: "Last Updated: October 2, 2026",
+  intro: "Relay Chess is built to keep as little about you as possible. Here is everything we store and how long we keep it.",
   sections: [
   {
-    "title": "1. Collection of Your Personal Information",
+    "title": "1. No accounts",
     "paragraphs": [
-      "To provide you with our services, Relay Chess may collect personally identifiable information, such as:"
-    ],
-    "list": [
-      "First and Last Name",
-      "Email Address",
-      "Username and profile information",
-      "Game statistics and history"
-    ],
-    "paragraphsAfter": [
-      "We only collect personal information that you voluntarily provide to us. This may occur when you:"
-    ],
-    "listAfter": [
-      "Create an account",
-      "Participate in games and tournaments",
-      "Contact us via email or support channels",
-      "Subscribe to notifications or updates"
+      "Relay Chess has no accounts and no sign-in. When you first visit, the server gives your browser a random player id and a nickname, stored in your browser for up to 30 days. Clearing your site data resets it. We never ask for your name, email or password to play."
     ]
   },
   {
-    "title": "2. Use of Your Personal Information",
-    "paragraphs": [
-      "Relay Chess uses your personal information to:"
-    ],
+    "title": "2. What we keep, and for how long",
     "list": [
-      "Provide and maintain our chess platform services",
-      "Match you with other players for games",
-      "Track your game history and statistics",
-      "Communicate with you about games, updates, and features",
-      "Send you notifications about your account activity",
-      "Improve our services and user experience"
+      "Finished games: moves, nicknames and player ids, so review links work. Deleted automatically after 30 days.",
+      "Leaderboard scores: wins, losses and draws per nickname for the current day and week. Deleted automatically about a day after the period ends.",
+      "Games in progress and room chat: held in server memory only, and gone when the room closes or the server restarts.",
+      "Contact form: the name, email and message you send us, so we can reply.",
+      "Your theme and board color: stored only in your browser."
     ]
   },
   {
-    "title": "3. Sharing Information with Third Parties",
+    "title": "3. Analytics",
     "paragraphs": [
-      "We do not sell, rent, or lease your personal information to third parties. We may share data with trusted partners who help us:"
-    ],
-    "list": [
-      "Perform statistical analysis and improve our services",
-      "Provide customer support and technical assistance",
-      "Send communications and notifications",
-      "Process authentication through OAuth providers (Google, Apple)"
-    ],
-    "paragraphsAfter": [
-      "All third parties are required to maintain the confidentiality of your information and are prohibited from using it for any other purpose."
+      "We use privacy-friendly page analytics (Vercel Analytics) to see which pages are used. If Google Analytics is enabled on this deployment, it records anonymous usage events. We do not sell, rent or share your data for advertising."
     ]
   },
   {
-    "title": "4. Your Rights",
+    "title": "4. Children",
     "paragraphs": [
-      "You have the right to:"
-    ],
-    "list": [
-      "Access your personal information",
-      "Request deletion of your personal information",
-      "Opt-out of marketing communications",
-      "Request correction of inaccurate data",
-      "Export your game data and statistics",
-      "Close your account at any time"
+      "Relay Chess does not knowingly collect personal information from children under 13. Because we don't ask for personal information to play, the only way we'd receive any is through the contact form. If a child has contacted us, ask us and we'll delete it."
     ]
   },
   {
-    "title": "5. Children Under Thirteen",
-    "paragraphs": [
-      "Relay Chess does not knowingly collect personal information from children under 13. If you are under 13, please do not use our services without parental consent. If we become aware that we have collected personal information from a child under 13, we will take steps to delete such information."
+    "title": "5. Your choices",
+    "list": [
+      "Clear your browser's site data for Relay Chess to drop your player id and nickname.",
+      "Ask us through the contact page to delete a message you sent.",
+      "Everything else expires on its own as described above."
     ]
   },
   {
-    "title": "6. Changes to This Policy",
+    "title": "6. Open source",
     "paragraphs": [
-      "We may update this Privacy Policy from time to time. We will notify you of any significant changes by:"
-    ],
-    "list": [
-      "Sending an email to your registered address",
-      "Posting a notice on our website",
-      "Updating the \"Last Updated\" date"
-    ],
-    "paragraphsAfter": [
-      "Your continued use of Relay Chess after such modifications constitutes your acceptance of the updated policy."
+      "The code that runs Relay Chess is open source, so you can check exactly what is stored. Other people may run their own copies; this policy covers the copy at relaychess.com."
+    ]
+  },
+  {
+    "title": "7. Changes",
+    "paragraphs": [
+      "We may update this policy. The date at the top shows when it last changed."
     ]
   }
 ] as LegalSection[],
@@ -102,73 +66,54 @@ const PRIVACY_LEGAL = {
 const TERMS_LEGAL = {
   title: "Terms of",
   titleAccent: "Service",
-  lastUpdated: "Last Updated: June 1, 2025",
+  lastUpdated: "Last Updated: October 2, 2026",
   sections: [
   {
-    "title": "1. Acceptance of Terms",
+    "title": "1. Acceptance of terms",
     "paragraphs": [
-      "By accessing and using Relay Chess, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service."
+      "By using Relay Chess at relaychess.com you agree to these terms. If you don't agree, please don't use the service."
     ]
   },
   {
-    "title": "2. Use License",
+    "title": "2. Open source",
     "paragraphs": [
-      "Permission is granted to temporarily use Relay Chess for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:"
-    ],
-    "list": [
-      "Modify or copy the materials",
-      "Use the materials for any commercial purpose or for any public display",
-      "Attempt to reverse engineer any software contained on Relay Chess",
-      "Remove any copyright or other proprietary notations from the materials"
+      "The Relay Chess software is open source under the MIT License, which governs your use of the code. These terms cover the hosted service at relaychess.com."
     ]
   },
   {
-    "title": "3. User Accounts",
+    "title": "3. Nicknames",
     "paragraphs": [
-      "To access certain features of Relay Chess, you must create an account. You agree to:"
-    ],
-    "list": [
-      "Provide accurate, current, and complete information during registration",
-      "Maintain and promptly update your account information",
-      "Maintain the security of your password and identification",
-      "Accept all responsibility for activities that occur under your account",
-      "Notify us immediately of any unauthorized use of your account"
+      "You can pick any nickname, and names aren't reserved. Don't impersonate other people or use names that are hateful or harassing. We may remove names or scores that break these rules."
     ]
   },
   {
-    "title": "4. Code of Conduct",
+    "title": "4. Code of conduct",
     "paragraphs": [
-      "You agree not to use Relay Chess to harass, abuse, or harm others. Cheating, exploiting bugs, or using automated tools to gain unfair advantages is strictly prohibited. We reserve the right to suspend or terminate accounts that violate these rules."
+      "Be kind in chat. Don't harass, abuse or threaten other players. The leaderboard is just for fun, but don't use bots, engines or exploits against other people."
     ]
   },
   {
     "title": "5. Disclaimer",
     "paragraphs": [
-      "Relay Chess is provided \"as is\" without warranties of any kind. We do not guarantee uninterrupted or error-free service. Your use of the platform is at your own risk."
+      "Relay Chess is provided \"as is\" without warranties of any kind. Games in progress can end if the server restarts, and leaderboards and saved games are deleted on a schedule."
     ]
   },
   {
-    "title": "6. Limitation of Liability",
+    "title": "6. Limitation of liability",
     "paragraphs": [
-      "In no event shall Relay Chess or its suppliers be liable for any damages arising out of the use or inability to use the platform, even if we have been notified of the possibility of such damages."
+      "To the extent the law allows, Relay Chess and its contributors are not liable for any damages arising from the use of, or inability to use, the service."
     ]
   },
   {
-    "title": "7. Modifications",
+    "title": "7. Changes",
     "paragraphs": [
-      "Relay Chess may revise these terms at any time without notice. By using this platform, you agree to be bound by the current version of these Terms of Service."
+      "We may revise these terms. The date at the top shows when they last changed, and continuing to use the service means you accept the current version."
     ]
   },
   {
-    "title": "8. Governing Law",
+    "title": "8. Contact",
     "paragraphs": [
-      "These terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law provisions."
-    ]
-  },
-  {
-    "title": "9. Contact Information",
-    "paragraphs": [
-      "If you have any questions about these Terms of Service, please contact us through our support channels on the Relay Chess website."
+      "Questions? Use the contact page."
     ]
   }
 ] as LegalSection[],

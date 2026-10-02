@@ -1,13 +1,10 @@
-import { randomBytes } from 'node:crypto';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { z } from 'zod';
-import { bearer, newGuest, signAccessToken, verifyAccessToken, verifyIdentityToken, type Identity } from './auth';
+import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
 import type { Config } from './config';
 import { leaderboardPage, leaderboardPosition, PERIODS } from './leaderboard';
-import type { Store, UserRecord } from './store/types';
-
-export const USERNAME = /^[A-Za-z0-9_-]{3,20}$/;
+import type { Store } from './store/types';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -18,10 +15,7 @@ declare global {
   }
 }
 
-/** What the client sees about a user. `email` only for yourself. */
-export function publicUser(u: UserRecord, self = false) {
-  return { id: u.id, username: u.username, boardColor: u.boardColor ?? null, guest: false, ...(self ? { email: u.email } : {}) };
-}
+const me = (who: Identity) => ({ id: who.id, username: who.name });
 
 const wrap =
   (fn: (req: Request, res: Response) => Promise<unknown>): RequestHandler =>
@@ -63,92 +57,33 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
     next();
   });
   const requireAuth: RequestHandler = (req, res, next) => (req.who ? next() : res.status(401).json({ error: 'unauthorized' }));
-  const requireAccount: RequestHandler = (req, res, next) =>
-    !req.who ? res.status(401).json({ error: 'unauthorized' }) : req.who.guest ? res.status(403).json({ error: 'account-required' }) : next();
 
   const contactLimit = limiter(5, 60 * 60_000);
-  const authLimit = limiter(30, 60_000);
+  const playerLimit = limiter(30, 60_000);
 
   app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind }));
 
-  // ---- auth ----
+  // ---- players (no accounts: a token is your identity) ----
 
-  app.post('/auth/guest', (req, res) => {
-    if (!config.GUEST_LOGIN) return res.status(403).json({ error: 'guest-login-disabled' });
-    if (!authLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
+  /** A new player with a random nickname. */
+  app.post('/players', (req, res) => {
+    if (!playerLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
     const who = newGuest();
-    res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: { id: who.id, username: who.name, guest: true, boardColor: null } });
+    res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: me(who) });
   });
 
-  app.post(
-    '/auth/exchange',
-    wrap(async (req, res) => {
-      if (!authLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
-      const body = z.object({ token: z.string() }).safeParse(req.body);
-      const id = body.success ? verifyIdentityToken(config.AUTH_SECRET, body.data.token) : null;
-      if (!id) return res.status(401).json({ error: 'invalid-identity' });
+  app.get('/me', requireAuth, (req, res) => res.json({ user: me(req.who!) }));
 
-      let user = await store.findUserByEmail(id.email);
-      if (!user) {
-        let username = `player_${randomBytes(3).toString('hex')}`;
-        while (await store.findUserByUsername(username)) username = `player_${randomBytes(3).toString('hex')}`;
-        user = await store.createUser({ email: id.email, username, createdAt: new Date() });
-      }
-      const who: Identity = { id: user.id, name: user.username, guest: false };
-      res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: publicUser(user, true) });
-    }),
-  );
+  /** Change your nickname. Names aren't reserved; you get a fresh token with the new name. */
+  app.patch('/me', requireAuth, (req, res) => {
+    const body = z.object({ username: z.string().max(40) }).strict().safeParse(req.body);
+    const name = body.success ? cleanNickname(body.data.username) : '';
+    if (!NICKNAME.test(name)) return res.status(400).json({ error: 'invalid-name' });
+    const who: Identity = { ...req.who!, name };
+    res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: me(who) });
+  });
 
-  app.get(
-    '/me',
-    requireAuth,
-    wrap(async (req, res) => {
-      const who = req.who!;
-      if (who.guest) return res.json({ user: { id: who.id, username: who.name, guest: true, boardColor: null } });
-      const user = await store.findUserById(who.id);
-      if (!user) return res.status(404).json({ error: 'not-found' });
-      res.json({ user: publicUser(user, true) });
-    }),
-  );
-
-  app.patch(
-    '/me',
-    requireAccount,
-    wrap(async (req, res) => {
-      const body = z
-        .object({ username: z.string().regex(USERNAME).optional(), boardColor: z.string().max(32).optional() })
-        .strict()
-        .safeParse(req.body);
-      if (!body.success) return res.status(400).json({ error: 'invalid-input' });
-      const who = req.who!;
-      if (body.data.username) {
-        const taken = await store.findUserByUsername(body.data.username);
-        if (taken && taken.id !== who.id) return res.status(409).json({ error: 'username-taken' });
-      }
-      const user = await store.updateUser(who.id, body.data);
-      if (!user) return res.status(404).json({ error: 'not-found' });
-      const token = signAccessToken(config.AUTH_SECRET, { id: user.id, name: user.username, guest: false });
-      res.json({ user: publicUser(user, true), token });
-    }),
-  );
-
-  // ---- users & games ----
-
-  app.get(
-    '/users/search',
-    wrap(async (req, res) => {
-      const q = String(req.query.q ?? '').trim();
-      if (q.length < 2 || q.length > 20) return res.json({ users: [] });
-      res.json({ users: await store.searchUsers(q, 10) });
-    }),
-  );
-
-  app.get(
-    '/users/:id/games',
-    wrap(async (req, res) => {
-      res.json({ games: await store.listGames(String(req.params.id), 50) });
-    }),
-  );
+  // ---- games ----
 
   app.get(
     '/games/:roomId',
@@ -175,9 +110,9 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
 
   app.get('/live-games', (_req, res) => res.json({ games: liveGames() }));
 
-  // ---- leaderboard ----
+  // ---- leaderboard (today / this week) ----
 
-  const period = z.enum(PERIODS as [string, ...string[]]).default('all-time');
+  const period = z.enum(PERIODS as [string, ...string[]]).default('daily');
 
   app.get(
     '/leaderboard',

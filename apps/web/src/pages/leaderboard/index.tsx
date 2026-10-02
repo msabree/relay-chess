@@ -6,8 +6,8 @@ export default function LeaderboardPage() {
   return (
     <>
       <Head>
-        <title>{"Leaderboard - Relay Chess"}</title>
-        <meta name="description" content={"View the Relay Chess leaderboard. See top 2v2 chess players, rankings, streaks, and climb to the top."} />
+        <title>{"Leaderboard · Relay Chess"}</title>
+        <meta name="description" content={"Today's and this week's top Relay Chess players. Just for fun, resets on its own."} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <NavigationBar />

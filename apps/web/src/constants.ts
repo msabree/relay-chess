@@ -74,6 +74,5 @@ export const SELECTED_GAME_MODE = 'Selected Game Mode';
 export const CREATED_PRIVATE_GAME = 'Created Private Game';
 export const STARTED_SOLO_GAME = 'Started Solo Game';
 export const VIEWED_LEADERBOARD = 'Viewed Leaderboard';
-export const CLICKED_SIGN_IN = 'Clicked Sign In';
 export const CLICKED_REVIEW_GAME = 'Clicked Review Game';
 export const CLICKED_DISLIKED_GAMEPLAY = 'Clicked Disliked Gameplay';

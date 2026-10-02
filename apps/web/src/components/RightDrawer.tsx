@@ -1,134 +1,140 @@
-import { useContext } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { clearAuth } from '@/lib/auth';
+import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '@/contexts/App';
-import dynamic from 'next/dynamic';
 import { useUser } from '@/hooks/useUser';
-
-const X = dynamic(() => import('lucide-react').then(mod => mod.X), { ssr: false });
-const LogOut = dynamic(() => import('lucide-react').then(mod => mod.LogOut), { ssr: false });
-const Settings = dynamic(() => import('lucide-react').then(mod => mod.Settings), { ssr: false });
-const Palette = dynamic(() => import('lucide-react').then(mod => mod.Palette), { ssr: false });
-const User = dynamic(() => import('lucide-react').then(mod => mod.User), { ssr: false });
-import { Button } from '@/components/ui/button';
+import { renamePlayer } from '@/apis/auth';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
-import { updateUser } from '@/apis/auth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { setBoardColor, useBoardColor } from '@/lib/settings';
 
-const RightDrawer = () => {
-  const { rightDrawerOpen, setRightDrawerOpen, setModal } = useContext(AppContext);
-  const { data:session } = useSession();
-  const userQuery = useUser();
-  const boardColor = userQuery.data?.boardColor ?? BOARD_COLOR_SCHEMES[0].value;
-  if (!rightDrawerOpen) return null;
+const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
+const LABELS: Record<string, string> = { slate: 'Slate', 'blue-white': 'Blue', 'green-white': 'Green', 'red-white': 'Red' };
+
+/** Settings: your nickname and board colors. Everything lives on this device. */
+const SettingsDrawer = () => {
+  const { rightDrawerOpen: open, setRightDrawerOpen: setOpen } = useContext(AppContext);
+  const user = useUser();
+  const board = useBoardColor();
+  const [name, setName] = useState('');
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Fill the field each time the drawer opens (not when a save updates the name).
+  useEffect(() => {
+    if (open) {
+      setName(user.data?.username ?? '');
+      setState('idle');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setOpen]);
+
+  if (!open) return null;
+  const clean = name.trim().replace(/\s+/g, ' ');
+  const valid = NICKNAME.test(clean);
+
+  const save = async () => {
+    if (!valid || clean === user.data?.username) return;
+    setState('saving');
+    try {
+      await renamePlayer(clean);
+      setState('saved');
+    } catch {
+      setState('error');
+    }
+  };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300" 
-      onClick={() => setRightDrawerOpen(false)}
-    >
-      <div 
-        className="fixed right-0 top-0 h-full w-80 glass-effect border-l border-line backdrop-blur-xl shadow-2xl"
-        onClick={e => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}>
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
+        className="fixed right-0 top-0 flex h-full w-full max-w-sm flex-col border-l border-line bg-surface shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-line">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg glass-effect border border-line">
-              <Settings className="h-5 w-5 text-accent-ink" />
-            </div>
-            <h2 className="text-xl font-bold text-fg">{"Settings"}</h2>
-          </div>
-          <button
-            onClick={() => setRightDrawerOpen(false)}
-            className="p-2.5 rounded-lg text-fg-muted hover:text-accent-ink hover:bg-fg/10 transition-all duration-200"
-          >
-            <X className="h-5 w-5" />
+        <div className="flex h-14 items-center justify-between border-b border-line px-5">
+          <h2 id="settings-title" className="text-base font-semibold">Settings</h2>
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close settings" className="flex h-10 w-10 items-center justify-center rounded-lg text-fg-muted hover:bg-fg/5 hover:text-fg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto h-[calc(100%-80px)]">
-          <div className="space-y-6">
-            <div className="flex flex-col items-center p-8 rounded-2xl glass-effect border border-line backdrop-blur-xl">
-              <div className="relative mb-5">
-                <Avatar className="w-24 h-24 border-2 border-accent/30">
-                  <AvatarImage src={session?.user?.image ?? '/static/images/avatar/1.jpg'} />
-                  <AvatarFallback className="bg-accent text-accent-fg text-2xl font-bold">
-                    {session?.user?.name?.[0]?.toUpperCase() ?? userQuery.data?.username?.[0]?.toUpperCase() ?? 'RC'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-success border-2 border-line"></div>
-              </div>
-              <div className="text-center">
-                <p className="text-fg font-semibold text-lg mb-2">{userQuery.data?.username ?? "Guest"}</p>
-                <p className="text-sm text-fg-muted">{session?.user?.email ?? "Not signed in"}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <button 
-                onClick={() => {
-                  setRightDrawerOpen(false);
-                  setModal({ name: 'UPDATE_PROFILE_INFO' });
+        <div className="flex-1 space-y-8 overflow-y-auto p-5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              save();
+            }}
+          >
+            <label htmlFor="nickname" className="text-sm font-semibold">Your name</label>
+            <p className="mt-1 text-sm text-fg-muted">What other players see. No account needed; this browser remembers you.</p>
+            <div className="mt-3 flex gap-2">
+              <input
+                id="nickname"
+                value={name}
+                maxLength={20}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setState('idle');
                 }}
-                className="w-full flex items-center gap-3 p-4 rounded-xl glass-effect border border-line hover:border-accent/50 hover:bg-accent/10 text-fg transition-all duration-200 group"
+                className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 text-sm focus:border-accent focus:outline-none"
+                aria-describedby="nickname-help"
+              />
+              <button
+                type="submit"
+                disabled={!valid || clean === user.data?.username || state === 'saving'}
+                className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent/90 disabled:opacity-50"
               >
-                <div className="p-2.5 rounded-lg bg-fg/5 group-hover:bg-accent/20 transition-colors">
-                  <User className="h-5 w-5 text-fg-muted group-hover:text-accent-ink transition-colors" />
-                </div>
-                <span className="font-medium">{"Edit Username"}</span>
+                {state === 'saving' ? 'Saving' : 'Save'}
               </button>
-
-              <div className="p-5 rounded-xl glass-effect border border-line backdrop-blur-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2.5 rounded-lg bg-fg/5">
-                    <Palette className="h-5 w-5 text-accent-ink" />
-                  </div>
-                  <span className="text-fg font-medium">{"Board Color"}</span>
-                </div>
-                <Select
-                  value={boardColor}
-                  onValueChange={(value) => {
-                    updateUser('boardColor', value).then(() => {
-                      userQuery.refetch();
-                    });
-                  }}
-                >
-                  <SelectTrigger className="w-full glass-effect border border-line text-fg focus:border-accent/50 focus:ring-accent/50 hover:border-accent/30">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass-effect border border-line backdrop-blur-xl">
-                    {BOARD_COLOR_SCHEMES.map((colorScheme) => (
-                      <SelectItem 
-                        key={colorScheme.labelKey} 
-                        value={colorScheme.value}
-                        className="text-fg hover:bg-fg/10 focus:bg-fg/10"
-                      >
-                        {(colorScheme.labelKey === 'slate' ? 'Slate (default)' : colorScheme.labelKey === 'blueWhite' ? 'Blue/White' : colorScheme.labelKey === 'greenWhite' ? 'Green/White' : 'Red/White')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
+            <p id="nickname-help" className={`mt-2 text-xs ${state === 'error' || (!valid && name) ? 'text-danger' : 'text-fg-subtle'}`} aria-live="polite">
+              {state === 'saved'
+                ? 'Saved. New games will use this name.'
+                : state === 'error'
+                  ? "Couldn't save that. Try again."
+                  : !valid && name
+                    ? '2 to 20 letters, numbers, spaces, _ or -.'
+                    : '2 to 20 characters.'}
+            </p>
+          </form>
 
-            {session && (
-              <div className="pt-6 border-t border-line mt-6">
-                <Button
-                  onClick={() => { clearAuth(); signOut(); }}
-                  variant="ghost"
-                  className="w-full flex items-center justify-center gap-2.5 glass-effect border border-danger/30 hover:border-danger/50 hover:bg-danger/10 text-danger hover:text-danger transition-all duration-200 py-3"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className="font-semibold">{"Sign Out"}</span>
-                </Button>
-              </div>
-            )}
+          <div>
+            <h3 id="board-label" className="text-sm font-semibold">Board</h3>
+            <div role="radiogroup" aria-labelledby="board-label" className="mt-3 grid grid-cols-4 gap-2">
+              {BOARD_COLOR_SCHEMES.map((s) => {
+                const on = board.value === s.value;
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setBoardColor(s.value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs ${on ? 'border-accent ring-1 ring-accent' : 'border-line hover:border-fg/30'}`}
+                  >
+                    <span className="grid h-10 w-10 grid-cols-2 overflow-hidden rounded-md" aria-hidden="true">
+                      <span style={{ background: s.light }} />
+                      <span style={{ background: s.dark }} />
+                      <span style={{ background: s.dark }} />
+                      <span style={{ background: s.light }} />
+                    </span>
+                    {LABELS[s.value] ?? s.value}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
   );
 };
 
-export default RightDrawer;
+export default SettingsDrawer;
