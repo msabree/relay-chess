@@ -2,30 +2,27 @@
 #   main -> relay-chess-server-stage (stage-api.relaychess.com)
 #   prod -> relay-chess-server       (api.relaychess.com)
 # The web app deploys on Vercel (see DEPLOY.md).
-
-x-server: &server
-  type: web
-  runtime: node
-  region: oregon
-  # Deploy after a push to the branch, but only once GitHub checks (CI) pass.
-  autoDeployTrigger: checksPass
-  buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
-  startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
-  healthCheckPath: /health
-  # Games live in memory, so keep exactly one instance.
-  numInstances: 1
-  buildFilter:
-    paths:
-      - apps/server/**
-      - packages/game/**
-      - pnpm-lock.yaml
-      - render.yaml
+# Both services deploy after a push to their branch, once GitHub checks (CI) pass.
+# Games live in memory, so each runs exactly one instance.
 
 services:
-  - <<: *server
+  - type: web
     name: relay-chess-server-stage
-    branch: main
+    runtime: node
+    region: oregon
     plan: free # sleeping is fine on staging
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
+    startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
+    healthCheckPath: /health
+    numInstances: 1
+    buildFilter:
+      paths:
+        - apps/server/**
+        - packages/game/**
+        - pnpm-lock.yaml
+        - render.yaml
     envVars:
       - key: NODE_VERSION
         value: "22"
@@ -40,10 +37,23 @@ services:
       - key: GUEST_LOGIN
         value: "true"
 
-  - <<: *server
+  - type: web
     name: relay-chess-server
-    branch: prod
+    runtime: node
+    region: oregon
     plan: starter # always on: a sleeping server drops live games
+    branch: prod
+    autoDeployTrigger: checksPass
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @relay-chess/server...
+    startCommand: cd apps/server && ./node_modules/.bin/tsx src/main.ts
+    healthCheckPath: /health
+    numInstances: 1
+    buildFilter:
+      paths:
+        - apps/server/**
+        - packages/game/**
+        - pnpm-lock.yaml
+        - render.yaml
     envVars:
       - key: NODE_VERSION
         value: "22"
