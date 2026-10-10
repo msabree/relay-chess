@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
+import { contactSchema } from '@relay-chess/game';
 import { z } from 'zod';
 import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
 import type { Config } from './config';
@@ -146,13 +147,7 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
     '/contact',
     wrap(async (req, res) => {
       if (!contactLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
-      const body = z
-        .object({
-          name: z.string().trim().min(1).max(100),
-          email: z.string().trim().email().max(200),
-          message: z.string().trim().min(1).max(5000),
-        })
-        .safeParse(req.body);
+      const body = contactSchema.safeParse(req.body);
       if (!body.success) return res.status(400).json({ error: 'invalid-input' });
       await store.saveContact({ ...body.data, userId: req.who?.id, sentAt: new Date() });
       res.json({ ok: true });

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { LogoMark } from '@/icons/Logo';
-
-const REPO_URL = 'https://github.com/msabree/relay-chess';
+import { NEW_ISSUE_URL, REPO_URL } from '@/lib/github';
 
 const Footer = (_props: { variant?: 'dark' | 'light' }) => (
   <footer className="border-t border-line">
@@ -12,6 +11,9 @@ const Footer = (_props: { variant?: 'dark' | 'light' }) => (
       </div>
       <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
         <a href={REPO_URL} className="text-fg-muted hover:text-fg">GitHub</a>
+        <a href={NEW_ISSUE_URL} target="_blank" rel="noopener noreferrer" className="text-fg-muted hover:text-fg">
+          Report an issue or feature request
+        </a>
         <Link href="/contact" className="text-fg-muted hover:text-fg">Contact</Link>
         <Link href="/terms-of-service" className="text-fg-muted hover:text-fg">Terms</Link>
         <Link href="/privacy-policy" className="text-fg-muted hover:text-fg">Privacy</Link>
