@@ -8,7 +8,7 @@ export interface HistoryMove {
   fen: string;
 }
 
-/** A finished game, kept for 30 days so review links work. */
+/** A finished game. Kept forever so review links work and games can be counted. */
 export interface GameRecord {
   roomId: string;
   gameType: 'blitz' | 'rapid' | 'classic' | 'untimed';

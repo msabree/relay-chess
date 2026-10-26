@@ -21,7 +21,7 @@ const PRIVACY_LEGAL = {
   {
     "title": "2. What we keep, and for how long",
     "list": [
-      "Finished games: moves, nicknames and player ids, so review links work. Deleted automatically after 30 days.",
+      "Finished games: moves, nicknames and player ids, so review links keep working.",
       "Leaderboard scores: wins, losses and draws per nickname for the current day and week. Deleted automatically about a day after the period ends.",
       "Games in progress and room chat: held in server memory only, and gone when the room closes or the server restarts.",
       "Contact form: the name, email and message you send us, so we can reply.",

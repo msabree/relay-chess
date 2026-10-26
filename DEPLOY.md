@@ -11,8 +11,8 @@ Two environments, one branch each:
 
 There are no accounts. Players get a random id and nickname from the server, stored in their browser. There is no Redis: live games are held in the server's memory, so each server runs as **one instance**. Production is always on; staging may sleep.
 
-MongoDB keeps two things, and both clean themselves up:
-- `recent_games`: finished games for review links, deleted after 30 days.
+MongoDB keeps two things:
+- `recent_games`: every finished game, kept forever (review links, total games played).
 - `scores`: today's and this week's leaderboard, deleted a day after each period ends.
 
 ## One-time setup
