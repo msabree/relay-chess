@@ -5,15 +5,20 @@ import { initials } from './util';
 /** Moves in pairs. Each move carries the initial of the teammate who played it. */
 const MoveList = ({ horizontal = false }: { horizontal?: boolean }) => {
   const { game, moveHistoryFen, setMoveHistoryFen, isGameOver } = useContext(ChessGameContext);
-  const end = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLOListElement>(null);
   const moves = game?.moves ?? [];
   const names = new Map([...(game?.teams.w ?? []), ...(game?.teams.b ?? [])].map((p) => [p.id, p.name]));
   const initial = (id: string) => initials(names.get(id) ?? '?');
   const lastFen = moves.at(-1)?.fen;
 
+  // Keep the latest move in view. Scroll only our own container: scrollIntoView
+  // also scrolls the page, which made the board jump on every move.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: 'nearest', inline: 'end' });
-  }, [moves.length]);
+    const el = list.current;
+    if (!el) return;
+    if (horizontal) el.scrollLeft = el.scrollWidth;
+    else if (el.parentElement) el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  }, [moves.length, horizontal]);
 
   const view = (fen: string) => setMoveHistoryFen(fen === lastFen ? '' : fen);
   const isViewing = (fen: string) => (moveHistoryFen ? moveHistoryFen === fen : fen === lastFen);
@@ -40,21 +45,20 @@ const MoveList = ({ horizontal = false }: { horizontal?: boolean }) => {
 
   if (horizontal) {
     return (
-      <ol className="flex items-center gap-1 overflow-x-auto px-3 py-1 scrollbar-hide" aria-label="Moves">
+      <ol ref={list} className="flex items-center gap-1 overflow-x-auto px-3 py-1 scrollbar-hide" aria-label="Moves">
         {moves.map((m, i) => (
           <li key={i} className="flex shrink-0 items-center">
             {i % 2 === 0 && <span className="mr-0.5 font-mono text-xs text-fg-subtle">{i / 2 + 1}.</span>}
             {cell(i)}
           </li>
         ))}
-        <div ref={end} />
       </ol>
     );
   }
 
   const rows = Math.ceil(moves.length / 2);
   return (
-    <ol className="px-2 py-1" aria-label="Moves">
+    <ol ref={list} className="px-2 py-1" aria-label="Moves">
       {Array.from({ length: rows }, (_, r) => (
         <li key={r} className="grid grid-cols-[32px_1fr_1fr] items-center">
           <span className="pl-2 font-mono text-xs text-fg-subtle">{r + 1}.</span>
@@ -62,7 +66,6 @@ const MoveList = ({ horizontal = false }: { horizontal?: boolean }) => {
           {cell(r * 2 + 1)}
         </li>
       ))}
-      <div ref={end} />
     </ol>
   );
 };
