@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
 import { ErrorInfo, useEffect, useState, useMemo, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { Arrow } from 'react-chessboard/dist/chessboard/types';
+import type { Arrow } from 'react-chessboard';
 
 import { useGame } from '@/hooks/useGame';
 import NavigationBar from '@/components/NavigationBar';
@@ -124,13 +124,13 @@ export default function GameAnalysis() {
     if (currentBestMove.length === 4) {
       const from = currentBestMove.substring(0, 2);
       const to = currentBestMove.substring(2, 4);
-      outputArrows.push([from, to, 'green'] as Arrow);
+      outputArrows.push({ startSquare: from, endSquare: to, color: 'green' });
     }
 
     if (previousMove && previousBestMove.length === 4 && previousBestMove !== currentMove?.lanMove) {
       const from = previousBestMove.substring(0, 2);
       const to = previousBestMove.substring(2, 4);
-      outputArrows.push([from, to, 'red'] as Arrow);
+      outputArrows.push({ startSquare: from, endSquare: to, color: 'red' });
     }
 
     return outputArrows;

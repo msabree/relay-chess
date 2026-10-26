@@ -21,11 +21,7 @@ export default function Custom404() {
         </div>
         <div className='flex place-content-evenly items-center mt-5'>
           <div className='h-[300px] w-[300px]'>
-            <Chessboard
-              position={'kkkkkkkk/kkkkkkkk/8/8/8/8/KKKKKKKK/KKKKKKKK'}
-              isDraggablePiece={() => true}
-              onPieceClick={() => false}
-            />
+            <Chessboard options={{ position: 'kkkkkkkk/kkkkkkkk/8/8/8/8/KKKKKKKK/KKKKKKKK' }} />
           </div>
           <Image src='/media/huh.png' alt={"404"} width={500} height={300} />
         </div>
