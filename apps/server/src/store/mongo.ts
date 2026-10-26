@@ -1,8 +1,6 @@
 import { MongoClient, type Collection, type Document } from 'mongodb';
 import type { ContactMessage, GameRecord, Score, Store } from './types';
 
-const GAME_TTL_SECONDS = 30 * 24 * 60 * 60;
-
 const strip = <T extends Document>(d: T | null) => {
   if (!d) return null;
   const { _id, ...rest } = d;
@@ -11,8 +9,8 @@ const strip = <T extends Document>(d: T | null) => {
 
 /**
  * MongoDB store. Uses new collections so nothing from the account era is
- * touched: `recent_games` (deleted after 30 days) and `scores` (deleted after
- * their day or week is over).
+ * touched: `recent_games` (kept forever, so we can count and review every game)
+ * and `scores` (deleted after their day or week is over).
  */
 export async function createMongoStore(url: string, dbName: string): Promise<Store> {
   const client = new MongoClient(url);
@@ -22,9 +20,12 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const scores: Collection<Score> = db.collection('scores');
   const contact: Collection<ContactMessage> = db.collection('contact-us');
 
+  // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
+  await games.dropIndex('timestamp_1').catch(() => {});
+
   await Promise.all([
     games.createIndex({ roomId: 1 }, { unique: true }),
-    games.createIndex({ timestamp: 1 }, { expireAfterSeconds: GAME_TTL_SECONDS }),
+    games.createIndex({ timestamp: 1 }),
     scores.createIndex({ period: 1, key: 1, userId: 1 }, { unique: true }),
     scores.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
