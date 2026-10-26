@@ -10,8 +10,7 @@ import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
 import { ANALYTICS_TEST_MODE, CREATED_PRIVATE_GAME, DEMO_VIDEO, GOOGLE_ANALYTICS_ID, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
-
-const REPO_URL = 'https://github.com/msabree/relay-chess';
+import { REPO_URL } from '@/lib/github';
 
 const STEPS = [
   {

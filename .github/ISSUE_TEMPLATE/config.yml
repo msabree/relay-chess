@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Something else
+    url: https://relaychess.com/contact
+    about: Partnerships, private questions, or anything that shouldn't be public.

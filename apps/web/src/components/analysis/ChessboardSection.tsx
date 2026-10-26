@@ -1,7 +1,5 @@
 import dynamic from 'next/dynamic';
-import { forwardRef } from 'react';
-import { Chessboard } from 'react-chessboard';
-import { Arrow, CustomSquareProps } from 'react-chessboard/dist/chessboard/types';
+import { Chessboard, type Arrow } from 'react-chessboard';
 import { EvaluationBar } from '@/components/analysis/EvaluationBar';
 
 const Check = dynamic(() => import('lucide-react').then(mod => mod.Check), { ssr: false });
@@ -69,30 +67,29 @@ export const ChessboardSection = ({
           )}
 
           <Chessboard
-            customDarkSquareStyle={{ backgroundColor: '#60688e' }}
-            customLightSquareStyle={{ backgroundColor: '#d3d7ec' }}
-            customBoardStyle={{ borderRadius: '8px', border: '1px solid #272D4D' }}
-            boardOrientation={orientation}
-            customArrows={createArrows()}
-            position={position}
-            customSquare={forwardRef<HTMLDivElement, CustomSquareProps>(
-              function CustomSquare(props, ref) {
-                const { children, square, style } = props;
-                return (
-                  <div ref={ref} style={{ ...style, position: 'relative' }}>
-                    {children}
-                    {square === currentSquare && (
-                      <div className="absolute top-0 right-0 flex items-center justify-center h-3.5 w-3.5">
-                        {(feedback === 'best' || feedback === 'good') && <Check className="h-3.5 w-3.5 text-success" />}
-                        {(feedback === 'unexpected') && <HelpCircle className="h-3.5 w-3.5 text-fg-muted" />}
-                        {(feedback === 'mistake') && <AlertTriangle className="h-3.5 w-3.5 text-accent-ink" />}
-                        {(feedback === 'blunder') && <X className="h-3.5 w-3.5 text-danger" />}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-            )}
+            options={{
+              darkSquareStyle: { backgroundColor: '#60688e' },
+              lightSquareStyle: { backgroundColor: '#d3d7ec' },
+              boardStyle: { borderRadius: '8px', border: '1px solid #272D4D' },
+              boardOrientation: orientation,
+              arrows: createArrows(),
+              allowDragging: false,
+              allowDrawingArrows: false,
+              position,
+              squareRenderer: ({ square, children }) => (
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  {children}
+                  {square === currentSquare && (
+                    <div className="absolute top-0 right-0 flex items-center justify-center h-3.5 w-3.5">
+                      {(feedback === 'best' || feedback === 'good') && <Check className="h-3.5 w-3.5 text-success" />}
+                      {(feedback === 'unexpected') && <HelpCircle className="h-3.5 w-3.5 text-fg-muted" />}
+                      {(feedback === 'mistake') && <AlertTriangle className="h-3.5 w-3.5 text-accent-ink" />}
+                      {(feedback === 'blunder') && <X className="h-3.5 w-3.5 text-danger" />}
+                    </div>
+                  )}
+                </div>
+              ),
+            }}
           />
 
           {/* Evaluation Bar */}

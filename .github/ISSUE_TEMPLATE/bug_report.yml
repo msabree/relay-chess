@@ -1,0 +1,29 @@
+name: Report a bug
+description: Something is broken or not working the way it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a game with a friend
+        2. ...
+  - type: input
+    id: link
+    attributes:
+      label: Game link
+      description: The game or review URL, if it happened in a game.
+      placeholder: https://relaychess.com/games/...
+  - type: input
+    id: device
+    attributes:
+      label: Browser and device
+      placeholder: Chrome on Windows, Safari on iPhone, ...
