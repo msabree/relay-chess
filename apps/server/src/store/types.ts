@@ -58,6 +58,8 @@ export interface Store {
   saveGame(game: GameRecord): Promise<void>;
   getGame(roomId: string): Promise<GameRecord | null>;
   setAnalysis(roomId: string, analysis: unknown): Promise<void>;
+  /** How many finished games are stored. May be approximate; must be cheap. */
+  countGames(): Promise<number>;
 
   /** Add one result to a player's score for a period, creating it if needed. */
   addScore(s: Omit<Score, 'wins' | 'losses' | 'draws'> & { outcome: 'win' | 'loss' | 'draw' }): Promise<void>;

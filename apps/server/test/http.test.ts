@@ -36,6 +36,12 @@ describe('players', () => {
   });
 });
 
+describe('stats', () => {
+  it('counts games played', async () => {
+    expect((await t.api('/stats')).body).toEqual({ gamesPlayed: 0 });
+  });
+});
+
 describe('leaderboard buckets', () => {
   it('days roll over at UTC midnight and weeks start on Monday', () => {
     const thu = new Date('2026-10-01T23:59:00Z');

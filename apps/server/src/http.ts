@@ -109,6 +109,18 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
     }),
   );
 
+  // Cached so homepage traffic doesn't hit the database.
+  let gamesPlayed = { n: 0, at: 0 };
+  app.get(
+    '/stats',
+    wrap(async (_req, res) => {
+      if (Date.now() - gamesPlayed.at > 60_000) {
+        gamesPlayed = { n: config.LEGACY_GAMES_PLAYED + (await store.countGames()), at: Date.now() };
+      }
+      res.json({ gamesPlayed: gamesPlayed.n });
+    }),
+  );
+
   app.get('/live-games', (_req, res) => res.json({ games: liveGames() }));
 
   // ---- leaderboard (today / this week) ----

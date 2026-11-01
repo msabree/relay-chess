@@ -10,6 +10,7 @@ import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
 import { ANALYTICS_TEST_MODE, CREATED_PRIVATE_GAME, DEMO_VIDEO, GOOGLE_ANALYTICS_ID, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
+import useGamesPlayed from '@/hooks/useGamesPlayed';
 import { REPO_URL } from '@/lib/github';
 
 const STEPS = [
@@ -33,6 +34,7 @@ const STEPS = [
 const LandingPage = () => {
   const { setModal, modal } = useContext(AppContext);
   const { totalOnline } = useOnlineStats();
+  const gamesPlayed = useGamesPlayed();
 
   useEffect(() => {
     if (GOOGLE_ANALYTICS_ID) ReactGA.initialize(GOOGLE_ANALYTICS_ID, { testMode: ANALYTICS_TEST_MODE });
@@ -60,6 +62,7 @@ const LandingPage = () => {
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-sm text-fg-muted">
               <span className="h-2 w-2 rounded-full bg-accent" />
               2v2 chess · free and open source
+              {gamesPlayed ? ` · ${gamesPlayed.toLocaleString('en-US')} games played` : ''}
             </p>
             <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
               Chess is better

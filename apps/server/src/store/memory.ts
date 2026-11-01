@@ -21,6 +21,9 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[] } {
       const g = games.get(roomId);
       if (g) g.analysis = copy(analysis);
     },
+    async countGames() {
+      return games.size;
+    },
     async addScore({ outcome, ...s }) {
       const id = `${s.period}|${s.key}|${s.userId}`;
       const cur = scores.get(id) ?? { ...s, wins: 0, losses: 0, draws: 0 };

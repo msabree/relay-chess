@@ -29,6 +29,7 @@ git branch prod && git push -u origin prod
    - `AUTH_SECRET`: `openssl rand -base64 48` (signs player tokens; never leaves Render)
    - `MONGODB_URL`: Atlas connection string. Same cluster is fine.
    - `DATABASE_NAME`: any name; use a different one for staging and production. The server creates its collections (`recent_games`, `scores`) on first start and never touches anything else in the database.
+   - `LEGACY_GAMES_PLAYED` (production only, set in `render.yaml`): 6177, the games in the old account-era `games` collection. It is added to the live count shown on the homepage.
 3. Custom domains: `staging-api.relaychess.com` on staging, `api.relaychess.com` on production.
 4. Check `/health` on both returns `{"ok":true,"store":"mongo"}`.
 

@@ -63,3 +63,5 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: https://relaychess.com,https://www.relaychess.com
+      - key: LEGACY_GAMES_PLAYED # games in the old account-era `games` collection
+        value: "6177"
