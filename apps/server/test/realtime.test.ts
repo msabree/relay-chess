@@ -237,4 +237,14 @@ describe('matchmaking', () => {
     expect(games[0]).toMatchObject({ moveCount: 0, timeControl: 'untimed' });
     await sleep(10);
   });
+
+  it('never lists friend rooms, even mid-game', async () => {
+    const watcher = await t.player();
+    const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
+    const room = await privateRoom(ps);
+    await play(ps, room.id, FOOLS_MATE.slice(0, 2));
+    const r = await watcher.socket.emitWithAck('lobby:watch');
+    if (!r.ok) throw new Error(r.error);
+    expect(r.games).toEqual([]);
+  });
 });

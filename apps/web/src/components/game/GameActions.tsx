@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChessGameContext } from '@/contexts/ChessGame';
 import { resultText } from './util';
+import ShareResult from './ShareResult';
 
 const btn = 'h-11 flex-1 rounded-lg border border-line text-sm font-medium hover:bg-fg/5 disabled:opacity-50 transition-colors';
 
@@ -44,6 +45,9 @@ const GameActions = () => {
             </Link>
           )}
         </div>
+        {game.result?.reason !== 'aborted' && game.moves.length > 0 && (
+          <ShareResult game={game} roomId={roomId} me={teamColor ?? null} />
+        )}
         <Link href="/" className="block text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
           Back to the lobby
         </Link>

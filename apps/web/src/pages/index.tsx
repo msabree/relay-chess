@@ -97,16 +97,12 @@ const LandingPage = () => {
             </p>
           </div>
           <figure className="overflow-hidden rounded-2xl border border-line bg-ink-950 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)]">
-            <video
+            <iframe
               src={DEMO_VIDEO}
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="metadata"
-              className="block aspect-video w-full bg-ink-950"
-              aria-label="A 2v2 Relay Chess game being played"
+              title="A 2v2 Relay Chess game being played"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              className="block aspect-video w-full border-0 bg-ink-950"
             />
           </figure>
         </section>
