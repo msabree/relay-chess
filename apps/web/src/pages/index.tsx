@@ -34,7 +34,7 @@ const STEPS = [
 
 const LandingPage = () => {
   const { setModal, modal } = useContext(AppContext);
-  const { totalOnline } = useOnlineStats();
+  const { totalOnline, playingNow } = useOnlineStats();
   const gamesPlayed = useGamesPlayed();
 
   useEffect(() => {
@@ -63,7 +63,6 @@ const LandingPage = () => {
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-sm text-fg-muted">
               <span className="h-2 w-2 rounded-full bg-accent" />
               2v2 chess · free and open source
-              {gamesPlayed ? ` · ${gamesPlayed.toLocaleString('en-US')} games played` : ''}
             </p>
             <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
               Chess is better
@@ -95,6 +94,25 @@ const LandingPage = () => {
             <p className="mt-4 text-sm text-fg-subtle">
               No account needed. {totalOnline > 1 ? `${totalOnline} people are around right now.` : 'Share a link and you are playing.'}
             </p>
+            {(gamesPlayed || playingNow > 0) && (
+              <dl className="mt-10 flex gap-10 border-t border-line pt-6">
+                {gamesPlayed ? (
+                  <div>
+                    <dt className="text-sm text-fg-muted">Games played</dt>
+                    <dd className="mt-1 text-4xl font-semibold tabular-nums tracking-tight">{gamesPlayed.toLocaleString('en-US')}</dd>
+                  </div>
+                ) : null}
+                {playingNow > 0 && (
+                  <div>
+                    <dt className="flex items-center gap-2 text-sm text-fg-muted">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
+                      Playing now
+                    </dt>
+                    <dd className="mt-1 text-4xl font-semibold tabular-nums tracking-tight">{playingNow.toLocaleString('en-US')}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
           </div>
           <figure className="overflow-hidden rounded-2xl border border-line bg-ink-950 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)]">
             <iframe

@@ -31,6 +31,7 @@ const S = {
   create: z.object({ timeControl }),
   seat: z.object({ roomId, team: z.enum(['w', 'b', 'spectator']) }),
   time: z.object({ roomId, timeControl }),
+  watchable: z.object({ roomId, watchable: z.boolean() }),
   move: z.object({ roomId, from: square, to: square, promotion: z.enum(['q', 'r', 'b', 'n']).optional() }),
   chat: z.object({ roomId, text: z.string().min(1).max(1000) }),
   queue: z.object({ timeControl: queueTimeControl }),
@@ -43,6 +44,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
   const online = new Map<string, number>();
   let statsDirty = false;
   let liveDirty = false;
+  let lastStats = '';
 
   const rooms = new RoomService({
     store,
@@ -72,11 +74,15 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
 
   const stats = (): LobbyStats => {
     const counts = matchmaker.counts();
-    return { online: online.size, queues: QUEUE_TIME_CONTROLS.map((tc) => ({ timeControl: tc, count: counts.get(tc) ?? 0 })) };
+    return { online: online.size, playing: rooms.playingCount(), queues: QUEUE_TIME_CONTROLS.map((tc) => ({ timeControl: tc, count: counts.get(tc) ?? 0 })) };
   };
 
   const flush = setInterval(() => {
-    if (statsDirty) io.to('lobby').emit('lobby:stats', stats());
+    // Stats also change when private games start or end, so send whenever they differ.
+    const s = stats();
+    const key = JSON.stringify(s);
+    if (statsDirty || key !== lastStats) io.to('lobby').emit('lobby:stats', s);
+    lastStats = key;
     if (liveDirty) io.to('lobby').emit('live:games', rooms.liveGames());
     statsDirty = liveDirty = false;
   }, deps.flushMs ?? 1000);
@@ -157,6 +163,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
 
     on('room:seat', S.seat, guard((p) => done(rooms.seat(p.roomId, who, p.team))));
     on('room:time', S.time, guard((p) => done(rooms.setTime(p.roomId, who, parseTimeControl(p.timeControl) ?? null))));
+    on('room:watchable', S.watchable, guard((p) => done(rooms.setWatchable(p.roomId, who, p.watchable))));
     on('game:move', S.move, guard((p) => done(rooms.move(p.roomId, who, p))));
     on('game:resign', S.roomRef, guard((p) => done(rooms.resign(p.roomId, who))));
     on('game:abort', S.roomRef, guard((p) => done(rooms.abort(p.roomId, who))));

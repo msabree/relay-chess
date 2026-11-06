@@ -10,7 +10,7 @@ const TIMERS = ['1,0', '3,2', ...TIMER_OPTIONS.map((t) => t.time)];
 
 /** Before the first move of a private game: invite, pick sides, pick the clock. */
 const RoomSetup = () => {
-  const { game, room, userId, teamColor, changeTeam, updateTimer, selectedTimer } = useContext(ChessGameContext);
+  const { game, room, userId, teamColor, changeTeam, updateTimer, selectedTimer, setWatchable } = useContext(ChessGameContext);
   const [copied, setCopied] = useState(false);
   if (!game || !room) return null;
   const url = typeof window === 'undefined' ? '' : window.location.href;
@@ -112,6 +112,22 @@ const RoomSetup = () => {
         </div>
         {!seated && <p className="mt-2 text-xs text-fg-subtle">Players pick the clock.</p>}
       </div>
+
+      <label className={`flex items-start gap-3 ${seated ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+        <input
+          type="checkbox"
+          checked={room.watchable}
+          disabled={!seated}
+          onChange={(e) => setWatchable(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
+        />
+        <span>
+          <span className="block text-sm font-semibold">Allow anyone to watch</span>
+          <span className="block text-xs text-fg-subtle">
+            Lists this game on Live Games so any spectator can join. Only people with the link can play.
+          </span>
+        </span>
+      </label>
 
       {room.spectators.length > 0 && (
         <p className="text-xs text-fg-subtle">Watching: {room.spectators.map((s) => (s.id === userId ? 'you' : s.name)).join(', ')}</p>

@@ -238,13 +238,24 @@ describe('matchmaking', () => {
     await sleep(10);
   });
 
-  it('never lists friend rooms, even mid-game', async () => {
+  it('keeps friend rooms off live games unless a player allows watching, but counts them as playing', async () => {
     const watcher = await t.player();
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     const room = await privateRoom(ps);
     await play(ps, room.id, FOOLS_MATE.slice(0, 2));
-    const r = await watcher.socket.emitWithAck('lobby:watch');
-    if (!r.ok) throw new Error(r.error);
-    expect(r.games).toEqual([]);
+    const before = await watcher.socket.emitWithAck('lobby:watch');
+    if (!before.ok) throw new Error(before.error);
+    expect(before.games).toEqual([]);
+    expect(before.stats.playing).toBe(1);
+
+    expect(await watcher.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toMatchObject({ ok: false });
+    const listed = next(watcher.socket, 'live:games', (games) => games.length === 1);
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
+    const [games] = await listed;
+    expect(games[0]).toMatchObject({ roomId: room.id, moveCount: 2 });
+
+    const done = next(watcher.socket, 'lobby:stats', (st) => st.playing === 0);
+    await play(ps, room.id, FOOLS_MATE.slice(2));
+    await done;
   });
 });

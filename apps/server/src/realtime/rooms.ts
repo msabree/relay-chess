@@ -38,6 +38,8 @@ const MAX_PLAYERS = 8;
 export interface Room {
   id: string;
   isPrivate: boolean;
+  /** private room opened up to anyone: listed on live games */
+  watchable: boolean;
   createdAt: number;
   game: GameState;
   spectators: Map<string, Spectator>;
@@ -95,11 +97,12 @@ export class RoomService {
     return this.rooms.size;
   }
 
-  create(opts: { isPrivate: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
+  create(opts: { isPrivate: boolean; watchable?: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
     const id = randomBytes(8).toString('base64url');
     const room: Room = {
       id,
       isPrivate: opts.isPrivate,
+      watchable: opts.watchable ?? false,
       createdAt: this.now(),
       game: createGame({ id, timeControl: opts.timeControl, teams: opts.teams }),
       spectators: new Map(),
@@ -113,7 +116,7 @@ export class RoomService {
     // Matchmade players haven't opened the room yet.
     for (const p of [...room.game.teams.w, ...room.game.teams.b]) room.game = setConnected(room.game, p.id, false);
     this.rooms.set(id, room);
-    if (!room.isPrivate) this.deps.onLiveChanged();
+    if (this.listed(room)) this.deps.onLiveChanged();
     return room;
   }
 
@@ -121,6 +124,7 @@ export class RoomService {
     return {
       id: room.id,
       isPrivate: room.isPrivate,
+      watchable: room.watchable,
       createdAt: room.createdAt,
       game: room.game,
       spectators: [...room.spectators.values()],
@@ -195,6 +199,19 @@ export class RoomService {
     });
   }
 
+  /** Any seated player can open a friend room up to the live games list (or close it). */
+  setWatchable(roomId: string, who: Identity, watchable: boolean): RoomResult {
+    const room = this.rooms.get(roomId);
+    if (!room) return fail('room-not-found');
+    if (!colorOf(room.game, who.id)) return fail('not-seated');
+    if (room.game.status === 'over') return fail('game-over');
+    if (room.watchable !== watchable) {
+      room.watchable = watchable;
+      this.changed(room);
+    }
+    return { ok: true, value: room };
+  }
+
   // ---- game actions ----
 
   move(roomId: string, who: Identity, input: MoveInput): RoomResult {
@@ -223,6 +240,7 @@ export class RoomService {
     const asIdentity = (p: { id: string; name: string }) => ({ id: p.id, name: p.name, guest: room.guests.has(p.id) });
     const next = this.create({
       isPrivate: room.isPrivate,
+      watchable: room.watchable,
       timeControl: room.game.timeControl,
       teams: { w: room.game.teams.b.map(asIdentity), b: room.game.teams.w.map(asIdentity) },
     });
@@ -253,7 +271,7 @@ export class RoomService {
 
   liveGames(): LiveGame[] {
     return [...this.rooms.values()]
-      .filter((r) => !r.isPrivate && r.game.status !== 'over')
+      .filter((r) => this.listed(r) && r.game.status !== 'over')
       .map((r) => ({
         roomId: r.id,
         white: r.game.teams.w.map((p) => p.name),
@@ -266,6 +284,18 @@ export class RoomService {
         spectators: r.spectators.size,
         createdAt: r.createdAt,
       }));
+  }
+
+  /** Games in progress (first move made), private ones included. */
+  playingCount(): number {
+    let n = 0;
+    for (const r of this.rooms.values()) if (r.game.status !== 'over' && r.game.moves.length > 0) n++;
+    return n;
+  }
+
+  /** Shown on live games: matchmade, or a friend room the players opened up. */
+  private listed(r: Room) {
+    return !r.isPrivate || r.watchable;
   }
 
   /** Drop rooms nobody has touched for a while. */
@@ -302,7 +332,7 @@ export class RoomService {
     this.schedule(room);
     if (room.game.status === 'over' && !room.saved) room.saved = this.finish(room);
     this.deps.onState(room);
-    if (!room.isPrivate) this.deps.onLiveChanged();
+    if (this.listed(room)) this.deps.onLiveChanged();
   }
 
   private clearTimers(room: Room) {
