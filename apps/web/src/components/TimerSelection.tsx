@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import ReactGA from 'react-ga4';
-import { STARTED_SOLO_GAME, TIMER_OPTIONS } from '@/constants';
+import { TIMER_OPTIONS } from '@/constants';
 import Matchmaking from '@/modals/Matchmaking';
 import useOnlineStats from '@/hooks/useOnlineStats';
 
@@ -25,10 +24,7 @@ const TimerSelection = (_props: { variant?: 'dark' | 'light' }) => {
             <button
               key={item.time}
               type="button"
-              onClick={() => {
-                setSelectedTimer(item.time);
-                ReactGA.event({ category: STARTED_SOLO_GAME, action: `Chose Time Control ${label}` });
-              }}
+              onClick={() => setSelectedTimer(item.time)}
               className="flex h-[76px] flex-col items-center justify-center rounded-lg border border-line bg-bg hover:border-fg/40 transition-colors"
             >
               <span className="font-mono text-base font-semibold">{label}</span>

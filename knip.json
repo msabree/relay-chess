@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    "apps/web": {
+      "entry": ["jest.config.js"],
+      "ignore": ["public/**", "src/components/ui/**"],
+      "jest": {
+        "config": [],
+        "entry": ["__tests__/**/*.test.{ts,tsx}"]
+      },
+      "ignoreDependencies": ["eslint", "eslint-config-next", "jest-environment-jsdom"]
+    }
+  }
+}

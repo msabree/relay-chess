@@ -1,7 +1,6 @@
-import { useContext, useEffect } from 'react';
+import { useContext } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import ReactGA from 'react-ga4';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import PlayOptions from '@/components/PlayOptions';
@@ -9,7 +8,7 @@ import LiveGamesList from '@/components/LiveGamesList';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
-import { ANALYTICS_TEST_MODE, CREATED_PRIVATE_GAME, DEMO_VIDEO, GOOGLE_ANALYTICS_ID, SITE_URL } from '@/constants';
+import { DEMO_VIDEO, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
 import useGamesPlayed from '@/hooks/useGamesPlayed';
 import { REPO_URL } from '@/lib/github';
@@ -37,9 +36,6 @@ const LandingPage = () => {
   const { totalOnline, playingNow } = useOnlineStats();
   const gamesPlayed = useGamesPlayed();
 
-  useEffect(() => {
-    if (GOOGLE_ANALYTICS_ID) ReactGA.initialize(GOOGLE_ANALYTICS_ID, { testMode: ANALYTICS_TEST_MODE });
-  }, []);
 
   return (
     <>
@@ -85,10 +81,7 @@ const LandingPage = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() => {
-                  setModal({ name: 'CREATING_PRIVATE_GAME' });
-                  ReactGA.event({ category: CREATED_PRIVATE_GAME, action: 'Created Private Game' });
-                }}
+                onClick={() => setModal({ name: 'CREATING_PRIVATE_GAME' })}
                 className="h-12 rounded-xl bg-accent px-6 text-base font-semibold text-accent-fg hover:bg-accent/90 transition-colors"
               >
                 Start a game with friends

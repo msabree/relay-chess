@@ -42,9 +42,11 @@ export interface HttpDeps {
   config: Config;
   store: Store;
   liveGames: () => unknown[];
+  /** games in progress, private ones included */
+  playing: () => number;
 }
 
-export function createHttpApp({ config, store, liveGames }: HttpDeps) {
+export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -62,7 +64,8 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
   const contactLimit = limiter(5, 60 * 60_000);
   const playerLimit = limiter(30, 60_000);
 
-  app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind }));
+  // `playing` counts every game in progress (private too): check it's 0 before a deploy.
+  app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind, playing: playing() }));
 
   // ---- players (no accounts: a token is your identity) ----
 
