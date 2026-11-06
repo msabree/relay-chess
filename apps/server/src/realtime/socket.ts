@@ -6,6 +6,7 @@ import {
   type LobbyStats,
   type ServerToClientEvents,
 } from '@relay-chess/game';
+import { randomUUID } from 'node:crypto';
 import type { Server } from 'socket.io';
 import { z } from 'zod';
 import { verifyAccessToken, type Identity } from '../auth';
@@ -14,6 +15,9 @@ import type { Store } from '../store/types';
 import { Matchmaker } from './matchmaking';
 import { Parties, PARTY_ID } from './parties';
 import { RoomService } from './rooms';
+
+/** Changes every time the server starts, so clients can tell it restarted. */
+const BOOT_ID = randomUUID();
 
 export interface SocketData {
   who: Identity;
@@ -106,6 +110,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
   });
 
   io.on('connection', (socket) => {
+    socket.emit('server:hello', { bootId: BOOT_ID });
     const who = socket.data.who;
     socket.join(`user:${who.id}`);
     online.set(who.id, (online.get(who.id) ?? 0) + 1);

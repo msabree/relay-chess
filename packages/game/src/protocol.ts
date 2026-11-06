@@ -96,6 +96,8 @@ export interface ServerToClientEvents {
   'party:state': (party: Party) => void;
   'queue:state': (p: { timeControl: string | null }) => void;
   'match:found': (p: { roomId: string }) => void;
+  /** Sent on connect. A new bootId means the server restarted (a release). */
+  'server:hello': (p: { bootId: string }) => void;
 }
 
 /** Time controls offered in public matchmaking. */

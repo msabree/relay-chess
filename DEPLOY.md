@@ -54,7 +54,12 @@ Settings → Branches → protect `main` and `prod`: require a PR and the **CI**
 2. Try it on staging.relaychess.com.
 3. Open a PR from `main` into `prod` and merge it. Production updates.
 
-Deploys restart the server, which ends games in progress, so release production when it's quiet.
+Deploys restart the server, which ends games in progress. So production releases go out **once a week, Friday 12:00 to 12:15 AM ET** (Thursday night):
+- From 11:45 PM the game page shows a banner warning that games may reset at 12, and during the window it says maintenance is underway.
+- After the restart, open pages (lobby, live games) reload themselves. Game pages don't, so players see their game ended.
+- Check `curl -s https://relay-chess-server.onrender.com/health`: `playing` is the number of games in progress.
+
+To change the window, edit `DEPLOY_WINDOW` in `apps/web/src/lib/deployWindow.ts`.
 
 ## First cutover
 - [ ] Staging works end to end: private game with a second browser, quick match with 4 tabs, rename yourself, see the leaderboard update.

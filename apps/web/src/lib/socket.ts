@@ -8,6 +8,7 @@ import { getToken, onAuthChange } from './auth';
 export type RelaySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 let socket: RelaySocket | null = null;
+let bootId: string | null = null;
 
 /** One socket for the whole app, authenticated with the current access token. */
 function getSocket(): RelaySocket {
@@ -20,6 +21,12 @@ function getSocket(): RelaySocket {
     // New identity (sign in/out, rename): reconnect so the server sees it.
     onAuthChange(() => {
       if (s.active) s.disconnect().connect();
+    });
+    // The server restarted (a release): reload to get a clean page. Not on a game
+    // page, where the player should see what happened to their game.
+    s.on('server:hello', ({ bootId: id }) => {
+      if (bootId && bootId !== id && !window.location.pathname.startsWith('/games/')) window.location.reload();
+      bootId = id;
     });
     socket = s;
   }
