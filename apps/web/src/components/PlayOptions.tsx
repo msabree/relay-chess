@@ -1,18 +1,13 @@
 import { useContext, useState } from 'react';
-import ReactGA from 'react-ga4';
 import { AppContext } from '@/contexts/App';
 import TimerSelection from '@/components/TimerSelection';
-import { CREATED_PRIVATE_GAME } from '@/constants';
 
 /** The three ways to start a game, shared by the landing page and home. */
 const PlayOptions = () => {
   const { setModal } = useContext(AppContext);
   const [code, setCode] = useState('');
 
-  const createRoom = () => {
-    setModal({ name: 'CREATING_PRIVATE_GAME' });
-    ReactGA.event({ category: CREATED_PRIVATE_GAME, action: 'Created Private Game' });
-  };
+  const createRoom = () => setModal({ name: 'CREATING_PRIVATE_GAME' });
   const joinTeam = () => code.trim() && setModal({ name: 'INVITE_TEAMMATES', data: { inviteCode: code.trim() } });
 
   return (

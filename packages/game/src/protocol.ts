@@ -21,6 +21,8 @@ export interface Spectator {
 export interface RoomSnapshot {
   id: string;
   isPrivate: boolean;
+  /** friend room the players opened up: it shows on live games */
+  watchable: boolean;
   createdAt: number;
   game: GameState;
   spectators: Spectator[];
@@ -46,6 +48,8 @@ export interface LiveGame {
 
 export interface LobbyStats {
   online: number;
+  /** games in progress right now, private ones included (count only) */
+  playing: number;
   queues: { timeControl: string; count: number }[];
 }
 
@@ -66,6 +70,7 @@ export interface ClientToServerEvents {
   'room:leave': (p: RoomRef) => void;
   'room:seat': (p: RoomRef & { team: Color | 'spectator' }, ack: Cb) => void;
   'room:time': (p: RoomRef & { timeControl: string }, ack: Cb) => void;
+  'room:watchable': (p: RoomRef & { watchable: boolean }, ack: Cb) => void;
   'game:move': (p: RoomRef & { from: string; to: string; promotion?: string }, ack: Cb) => void;
   'game:resign': (p: RoomRef, ack: Cb) => void;
   'game:abort': (p: RoomRef, ack: Cb) => void;
@@ -91,6 +96,8 @@ export interface ServerToClientEvents {
   'party:state': (party: Party) => void;
   'queue:state': (p: { timeControl: string | null }) => void;
   'match:found': (p: { roomId: string }) => void;
+  /** Sent on connect. A new bootId means the server restarted (a release). */
+  'server:hello': (p: { bootId: string }) => void;
 }
 
 /** Time controls offered in public matchmaking. */

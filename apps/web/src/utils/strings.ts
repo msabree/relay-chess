@@ -1,31 +1,3 @@
-export const capitalizeFirstLetter = (str: string) => {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-};
-
-export const validateEmail = (str: string) => {
-  return String(str)
-    .toLowerCase()
-    .match(
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-    );
-};
-
-// alpha numeric and underscores
-export const validateUsername = (str: string) => {
-  return String(str).toLowerCase().match(/^[a-zA-Z0-9_]*$/);
-};
-
-// alpha numeric and underscores and white space and apostrophes
-export const validateTeamname = (str: string) => {
-  return String(str).toLowerCase().match(/^[a-zA-Z0-9_'\s]*$/);
-};
-
-export const containsLink = (str: string) => {
-  return String(str).match(
-    /((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-]))/
-  );
-};
-
 /**
  * Formats anonymous usernames for display
  * Takes a long anonId and returns a shorter, readable format

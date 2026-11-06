@@ -6,6 +6,8 @@ export const getGame = (roomId: string) => api.get(`/games/${encodeURIComponent(
 export const saveAnalysis = (roomId: string, analysis: Analysis[]) =>
   api.post(`/games/${encodeURIComponent(roomId)}/analysis`, { analysis });
 
+export const getStats = () => api.get<{ gamesPlayed: number }>('/stats');
+
 export const getLeaderboard = (page: number, pageSize: number, period: string = 'all-time') =>
   api.get('/leaderboard', { params: { page, pageSize, period } });
 

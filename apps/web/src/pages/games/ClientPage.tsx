@@ -6,6 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { ChessGameProvider } from '@/contexts/ChessGame';
 import NavigationBar from '@/components/NavigationBar';
 import GameScreen from '@/components/game/GameScreen';
+import DeployBanner from '@/components/game/DeployBanner';
 import { useBoardColor } from '@/lib/settings';
 
 function GamesErrorFallback() {
@@ -41,6 +42,7 @@ const Room = () => {
       </Head>
       <ChessGameProvider roomId={roomId}>
         <NavigationBar compact />
+        <DeployBanner />
         <GameScreen lightColor={scheme.light} darkColor={scheme.dark} />
       </ChessGameProvider>
     </ErrorBoundary>
