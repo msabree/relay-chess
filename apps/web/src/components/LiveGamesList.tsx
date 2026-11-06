@@ -2,6 +2,9 @@ import React from 'react';
 import useLiveGames from '@/hooks/useLiveGames';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { Chessboard } from 'react-chessboard';
+import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { getTimerLabel } from '@/components/TimerSelection';
 import { formatTimeRemaining, formatRelativeTime } from '@/utils/date';
 import { formatAnonUsername } from '@/utils/strings';
@@ -11,8 +14,14 @@ const Clock = dynamic(() => import('lucide-react').then(mod => mod.Clock), { ssr
 const Move = dynamic(() => import('lucide-react').then(mod => mod.Move), { ssr: false });
 const Play = dynamic(() => import('lucide-react').then(mod => mod.Play), { ssr: false });
 
-const LiveGamesList = () => {
-  const { liveGames, isConnected } = useLiveGames();
+type Props = {
+  /** Home page mode: show the first few games, link to the full list, hide when empty. */
+  preview?: number;
+};
+
+const LiveGamesList = ({ preview }: Props) => {
+  const { liveGames: allGames, isConnected } = useLiveGames();
+  const liveGames = preview ? allGames.slice(0, preview) : allGames;
   const router = useRouter();
   const handleSpectateGame = (roomId: string) => {
     router.push(`/games/${roomId}`);
@@ -23,18 +32,27 @@ const LiveGamesList = () => {
       ? usernames.map(u => formatAnonUsername(u)).join(', ')
       : "Anonymous";
 
+  if (preview && liveGames.length === 0) return null;
+
+  const Heading = preview ? 'h2' : 'h1';
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className={`max-w-6xl mx-auto px-4 ${preview ? 'pb-16' : 'py-8'}`}>
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-fg">
-            {"Live Games"}
-          </h1>
+          <Heading className={preview ? 'text-2xl font-semibold tracking-tight sm:text-3xl text-fg' : 'text-3xl font-bold text-fg'}>
+            {preview ? "Live now" : "Live Games"}
+          </Heading>
           {isConnected && (
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
               <span className="text-sm text-fg-muted">{"Live"}</span>
             </div>
+          )}
+          {preview && allGames.length > liveGames.length && (
+            <Link href="/live-games" className="ml-auto text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
+              {`See all ${allGames.length}`}
+            </Link>
           )}
         </div>
         <p className="text-fg-muted">
@@ -67,6 +85,21 @@ const LiveGamesList = () => {
               onClick={() => handleSpectateGame(game.roomId)}
               className="glass-effect border border-line rounded-xl p-6 hover:border-accent/50 hover:bg-fg/5 transition-all duration-200 text-left group"
             >
+              <div className="pointer-events-none mb-4">
+                <Chessboard
+                  options={{
+                    id: `live-${game.roomId}`,
+                    position: game.currentFen,
+                    allowDragging: false,
+                    showNotation: false,
+                    animationDurationInMs: 200,
+                    darkSquareStyle: { backgroundColor: BOARD_COLOR_SCHEMES[0].dark },
+                    lightSquareStyle: { backgroundColor: BOARD_COLOR_SCHEMES[0].light },
+                    boardStyle: { borderRadius: 6, overflow: 'hidden' },
+                  }}
+                />
+              </div>
+
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full border-2 ${

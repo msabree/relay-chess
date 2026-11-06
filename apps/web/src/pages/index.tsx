@@ -5,6 +5,7 @@ import ReactGA from 'react-ga4';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import PlayOptions from '@/components/PlayOptions';
+import LiveGamesList from '@/components/LiveGamesList';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
@@ -109,6 +110,9 @@ const LandingPage = () => {
             />
           </figure>
         </section>
+
+        {/* Live games (hidden when none are running) */}
+        <LiveGamesList preview={3} />
 
         {/* How it works */}
         <section className="border-y border-line bg-surface">
