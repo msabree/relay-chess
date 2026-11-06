@@ -242,6 +242,13 @@ describe('matchmaking', () => {
     const watcher = await t.player();
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     const room = await privateRoom(ps);
+    // Opened up during setup: still not listed, since joining then takes a seat.
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
+    const setup = await watcher.socket.emitWithAck('lobby:watch');
+    if (!setup.ok) throw new Error(setup.error);
+    expect(setup.games).toEqual([]);
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: false })).toEqual({ ok: true });
+
     await play(ps, room.id, FOOLS_MATE.slice(0, 2));
     const before = await watcher.socket.emitWithAck('lobby:watch');
     if (!before.ok) throw new Error(before.error);
@@ -253,6 +260,14 @@ describe('matchmaking', () => {
     expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
     const [games] = await listed;
     expect(games[0]).toMatchObject({ roomId: room.id, moveCount: 2 });
+
+    // Someone arriving from live games mid-game only gets to watch.
+    const stranger = await t.player();
+    const joined = await stranger.socket.emitWithAck('room:join', { roomId: room.id });
+    if (!joined.ok) throw new Error(joined.error);
+    expect([...joined.room.game.teams.w, ...joined.room.game.teams.b].map((p) => p.id)).not.toContain(stranger.user.id);
+    expect(joined.room.spectators.map((s) => s.id)).toContain(stranger.user.id);
+    expect(await stranger.socket.emitWithAck('room:seat', { roomId: room.id, team: 'w' })).toMatchObject({ ok: false });
 
     const done = next(watcher.socket, 'lobby:stats', (st) => st.playing === 0);
     await play(ps, room.id, FOOLS_MATE.slice(2));

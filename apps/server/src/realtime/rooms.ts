@@ -293,9 +293,13 @@ export class RoomService {
     return n;
   }
 
-  /** Shown on live games: matchmade, or a friend room the players opened up. */
+  /**
+   * Shown on live games: matchmade, or a friend room the players opened up.
+   * Friend rooms only once the game has started: before that, opening the room
+   * hands out seats, so it must stay link-only.
+   */
   private listed(r: Room) {
-    return !r.isPrivate || r.watchable;
+    return !r.isPrivate || (r.watchable && r.game.status !== 'waiting');
   }
 
   /** Drop rooms nobody has touched for a while. */

@@ -124,7 +124,7 @@ const RoomSetup = () => {
         <span>
           <span className="block text-sm font-semibold">Allow anyone to watch</span>
           <span className="block text-xs text-fg-subtle">
-            Lists this game on Live Games so any spectator can join. Only people with the link can play.
+            Shows this game on Live Games once it starts, so anyone can watch. Only people with the link can play.
           </span>
         </span>
       </label>
