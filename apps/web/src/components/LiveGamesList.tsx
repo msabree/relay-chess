@@ -2,7 +2,6 @@ import React from 'react';
 import useLiveGames from '@/hooks/useLiveGames';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import { Chessboard } from 'react-chessboard';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { getTimerLabel } from '@/components/TimerSelection';
@@ -14,14 +13,8 @@ const Clock = dynamic(() => import('lucide-react').then(mod => mod.Clock), { ssr
 const Move = dynamic(() => import('lucide-react').then(mod => mod.Move), { ssr: false });
 const Play = dynamic(() => import('lucide-react').then(mod => mod.Play), { ssr: false });
 
-type Props = {
-  /** Home page mode: show the first few games, link to the full list, hide when empty. */
-  preview?: number;
-};
-
-const LiveGamesList = ({ preview }: Props) => {
-  const { liveGames: allGames, isConnected } = useLiveGames();
-  const liveGames = preview ? allGames.slice(0, preview) : allGames;
+const LiveGamesList = () => {
+  const { liveGames, isConnected } = useLiveGames();
   const router = useRouter();
   const handleSpectateGame = (roomId: string) => {
     router.push(`/games/${roomId}`);
@@ -32,27 +25,18 @@ const LiveGamesList = ({ preview }: Props) => {
       ? usernames.map(u => formatAnonUsername(u)).join(', ')
       : "Anonymous";
 
-  if (preview && liveGames.length === 0) return null;
-
-  const Heading = preview ? 'h2' : 'h1';
-
   return (
-    <div className={`max-w-6xl mx-auto px-4 ${preview ? 'pb-16' : 'py-8'}`}>
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Heading className={preview ? 'text-2xl font-semibold tracking-tight sm:text-3xl text-fg' : 'text-3xl font-bold text-fg'}>
-            {preview ? "Live now" : "Live Games"}
-          </Heading>
+          <h1 className="text-3xl font-bold text-fg">
+            {"Live Games"}
+          </h1>
           {isConnected && (
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
               <span className="text-sm text-fg-muted">{"Live"}</span>
             </div>
-          )}
-          {preview && allGames.length > liveGames.length && (
-            <Link href="/live-games" className="ml-auto text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
-              {`See all ${allGames.length}`}
-            </Link>
           )}
         </div>
         <p className="text-fg-muted">

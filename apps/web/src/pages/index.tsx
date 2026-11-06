@@ -4,7 +4,7 @@ import Link from 'next/link';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import PlayOptions from '@/components/PlayOptions';
-import LiveGamesList from '@/components/LiveGamesList';
+import LiveGamesStrip from '@/components/LiveGamesStrip';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
@@ -33,7 +33,7 @@ const STEPS = [
 
 const LandingPage = () => {
   const { setModal, modal } = useContext(AppContext);
-  const { totalOnline, playingNow } = useOnlineStats();
+  const { totalOnline } = useOnlineStats();
   const gamesPlayed = useGamesPlayed();
 
 
@@ -86,25 +86,10 @@ const LandingPage = () => {
               >
                 Start a game with friends
               </button>
-              <Link
-                href="/live-games"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-6 text-base font-medium hover:bg-fg/5 transition-colors"
-              >
-                Watch a live game
-              </Link>
             </div>
             <p className="mt-4 text-sm text-fg-subtle">
               No account needed. {totalOnline > 1 ? `${totalOnline} people are around right now.` : 'Share a link and you are playing.'}
             </p>
-            {playingNow > 0 && (
-              <p className="mt-6 flex items-center gap-2 text-sm text-fg-muted">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
-                <span>
-                  <span className="font-semibold text-fg tabular-nums">{playingNow.toLocaleString('en-US')}</span>{' '}
-                  {playingNow === 1 ? 'game' : 'games'} being played right now
-                </span>
-              </p>
-            )}
           </div>
           <figure className="overflow-hidden rounded-2xl border border-line bg-ink-950 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)]">
             <iframe
@@ -118,7 +103,7 @@ const LandingPage = () => {
         </section>
 
         {/* Live games (hidden when none are running) */}
-        <LiveGamesList preview={3} />
+        <LiveGamesStrip />
 
         {/* How it works */}
         <section className="border-y border-line bg-surface">
