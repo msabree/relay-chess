@@ -83,8 +83,8 @@ const PlayOptions = () => {
         <section className="rounded-2xl border border-line bg-surface p-6">
           <h3 className="text-lg font-semibold tracking-tight">Quick match</h3>
           <p className="mt-1.5 mb-4 text-sm text-fg-muted leading-relaxed">
-            Hop in the public queue and we&apos;ll seat you with three others. Some hours it&apos;s quiet, so a private
-            room is the sure bet.
+            Hop in the queue for a 2v2 with three others. We&apos;re still growing, so if it&apos;s quiet you can start a
+            1v1 instead.
           </p>
           <TimerSelection />
         </section>

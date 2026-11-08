@@ -190,21 +190,22 @@ describe('matchmaking', () => {
   it('four solo players with the same time control get a public 2v2', async () => {
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     const found = ps.map((p) => next(p.socket, 'match:found'));
-    for (const p of ps) expect(await p.socket.emitWithAck('queue:join', { timeControl: '5+3' })).toEqual({ ok: true });
+    for (const p of ps) expect(await p.socket.emitWithAck('queue:join', { timeControl: '5+5' })).toEqual({ ok: true });
     const ids = (await Promise.all(found)).map(([m]) => m.roomId);
     expect(new Set(ids).size).toBe(1);
     const room = t.server.rooms.get(ids[0]!)!;
     expect(room.isPrivate).toBe(false);
     expect(room.game.teams.w).toHaveLength(2);
     expect(room.game.teams.b).toHaveLength(2);
-    expect(room.game.timeControl).toEqual({ initialMs: 300_000, incrementMs: 3000 });
+    expect(room.game.timeControl).toEqual({ initialMs: 300_000, incrementMs: 5000 });
   });
 
   it('does not mix time controls and only offers the listed ones', async () => {
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
-    for (const [i, p] of ps.entries()) await p.socket.emitWithAck('queue:join', { timeControl: i < 3 ? '5+3' : '10+0' });
+    for (const [i, p] of ps.entries()) await p.socket.emitWithAck('queue:join', { timeControl: i < 3 ? '5+5' : 'untimed' });
     expect(t.server.rooms.size).toBe(0);
     expect(await ps[0]!.socket.emitWithAck('queue:join', { timeControl: '7+7' })).toEqual({ ok: false, error: 'invalid-input' });
+    expect(await ps[0]!.socket.emitWithAck('queue:join', { timeControl: '10+0' })).toEqual({ ok: false, error: 'invalid-input' });
   });
 
   it('a party queues as a team against solo players', async () => {
@@ -215,14 +216,29 @@ describe('matchmaking', () => {
     if (!joined.ok) throw new Error(joined.error);
     expect(joined.party.members.map((m) => m.isHost)).toEqual([true, false]);
 
-    expect(await friend!.socket.emitWithAck('party:queue', { partyId, timeControl: '10+0' })).toEqual({ ok: false, error: 'not-host' });
+    expect(await friend!.socket.emitWithAck('party:queue', { partyId, timeControl: 'untimed' })).toEqual({ ok: false, error: 'not-host' });
     const found = [host, friend, s1, s2].map((p) => next(p!.socket, 'match:found'));
-    expect(await host!.socket.emitWithAck('party:queue', { partyId, timeControl: '10+0' })).toEqual({ ok: true });
-    await s1!.socket.emitWithAck('queue:join', { timeControl: '10+0' });
-    await s2!.socket.emitWithAck('queue:join', { timeControl: '10+0' });
+    expect(await host!.socket.emitWithAck('party:queue', { partyId, timeControl: 'untimed' })).toEqual({ ok: true });
+    await s1!.socket.emitWithAck('queue:join', { timeControl: 'untimed' });
+    await s2!.socket.emitWithAck('queue:join', { timeControl: 'untimed' });
     const [roomId] = (await Promise.all(found)).map(([m]) => m.roomId);
     const room = t.server.rooms.get(roomId!)!;
     expect(room.game.teams.w.map((p) => p.id).sort()).toEqual([host!.user.id, friend!.user.id].sort());
+  });
+
+  it('two players who choose "start now" get a 1v1; the rest keep waiting', async () => {
+    const [a, b, c] = await Promise.all([1, 2, 3].map(() => t.player()));
+    expect(await a!.socket.emitWithAck('queue:ready')).toEqual({ ok: false, error: 'not-queued' });
+    for (const p of [a, b, c]) await p!.socket.emitWithAck('queue:join', { timeControl: '5+5' });
+    expect(await a!.socket.emitWithAck('queue:ready')).toEqual({ ok: true });
+    expect(t.server.rooms.size).toBe(0); // a lone ready player waits
+    expect(t.server.matchmaker.counts().get('5+5')).toEqual({ count: 3, ready: 1 });
+    const found = [a, b].map((p) => next(p!.socket, 'match:found'));
+    expect(await b!.socket.emitWithAck('queue:ready')).toEqual({ ok: true });
+    const [roomId] = (await Promise.all(found)).map(([m]) => m.roomId);
+    const room = t.server.rooms.get(roomId!)!;
+    expect([room.game.teams.w.length, room.game.teams.b.length]).toEqual([1, 1]);
+    expect(t.server.matchmaker.soloTimeControl(c!.user.id)).toBe('5+5'); // c didn't opt in
   });
 
   it('lobby watchers see stats and live public games', async () => {

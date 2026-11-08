@@ -21,6 +21,12 @@ export const TIMER_OPTIONS = [
   }
 ];
 
+/** Public and team queues: one timed, one casual, so the small pool isn't split. */
+export const QUEUE_TIMER_OPTIONS = [
+  { time: '5,5', typeKey: 'blitz' as const },
+  { time: '0,0', typeKey: 'untimed' as const },
+];
+
 // BOARD COLORS
 export const BOARD_COLOR_SCHEMES = [
   {

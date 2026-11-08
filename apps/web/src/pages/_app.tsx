@@ -14,6 +14,13 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['500', '600'], variabl
 function RelayApp({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      {/* On :root so dialogs, which render outside the wrapper below, get the fonts too. */}
+      <style jsx global>{`
+        :root {
+          --font-sans: ${sans.style.fontFamily};
+          --font-mono: ${mono.style.fontFamily};
+        }
+      `}</style>
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <div className={`${sans.variable} ${mono.variable} font-sans min-h-screen bg-bg text-fg`}>

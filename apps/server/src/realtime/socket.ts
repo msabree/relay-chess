@@ -78,7 +78,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
 
   const stats = (): LobbyStats => {
     const counts = matchmaker.counts();
-    return { online: online.size, playing: rooms.playingCount(), queues: QUEUE_TIME_CONTROLS.map((tc) => ({ timeControl: tc, count: counts.get(tc) ?? 0 })) };
+    return { online: online.size, playing: rooms.playingCount(), queues: QUEUE_TIME_CONTROLS.map((tc) => ({ timeControl: tc, count: counts.get(tc)?.count ?? 0, ready: counts.get(tc)?.ready ?? 0 })) };
   };
 
   const flush = setInterval(() => {
@@ -204,6 +204,12 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
     on('queue:leave', null, () => {
       matchmaker.leaveSolo(who.id);
       io.to(`user:${who.id}`).emit('queue:state', { timeControl: null });
+      statsDirty = true;
+    });
+
+    on('queue:ready', null, () => {
+      // may match right away; match:found tells the client
+      if (!matchmaker.setReady(who.id)) return { ok: false, error: 'not-queued' };
       statsDirty = true;
     });
 

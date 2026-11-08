@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TIMER_OPTIONS } from '@/constants';
+import { QUEUE_TIMER_OPTIONS } from '@/constants';
 import Matchmaking from '@/modals/Matchmaking';
 import useOnlineStats from '@/hooks/useOnlineStats';
 
@@ -15,11 +15,11 @@ const TimerSelection = (_props: { variant?: 'dark' | 'light' }) => {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {TIMER_OPTIONS.map((item) => {
+      <div className="grid grid-cols-2 gap-2">
+        {QUEUE_TIMER_OPTIONS.map((item) => {
           const waiting = getQueueCount(item.time);
           const label = getTimerLabel(item.time, 'No clock');
-          const kind = item.typeKey === 'blitz' ? 'Blitz' : item.typeKey === 'rapid' ? 'Rapid' : 'Casual';
+          const kind = item.typeKey === 'blitz' ? 'Blitz' : 'Casual';
           return (
             <button
               key={item.time}

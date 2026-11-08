@@ -10,9 +10,10 @@ const Users = dynamic(() => import('lucide-react').then(mod => mod.Users), { ssr
 interface CompactTimerSelectionProps {
   selectedTimer: string;
   onTimerChange: (_timer: string) => void;
+  options?: typeof TIMER_OPTIONS;
 }
 
-const CompactTimerSelection = ({ selectedTimer, onTimerChange }: CompactTimerSelectionProps) => {
+const CompactTimerSelection = ({ selectedTimer, onTimerChange, options = TIMER_OPTIONS }: CompactTimerSelectionProps) => {
   const { getQueueCount } = useOnlineStats();
   return (
     <div className='space-y-2'>
@@ -21,7 +22,7 @@ const CompactTimerSelection = ({ selectedTimer, onTimerChange }: CompactTimerSel
           <SelectValue placeholder={"Select time control"} />
         </SelectTrigger>
         <SelectContent className='glass-effect border border-line backdrop-blur-xl'>
-          {TIMER_OPTIONS.map((option) => {
+          {options.map((option) => {
             const queueCount = getQueueCount(option.time);
             const label = getTimerLabel(option.time, "No Timer");
             return (
