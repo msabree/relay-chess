@@ -29,6 +29,7 @@ git branch prod && git push -u origin prod
    - `AUTH_SECRET`: `openssl rand -base64 48` (signs player tokens; never leaves Render)
    - `MONGODB_URL`: Atlas connection string. Same cluster is fine.
    - `DATABASE_NAME`: any name; use a different one for staging and production. The server creates its collections (`recent_games`, `scores`) on first start and never touches anything else in the database.
+   - `LEGACY_GAMES_PLAYED` (production only, set in `render.yaml`): 6177, the games in the old account-era `games` collection. It is added to the live count shown on the homepage.
 3. Custom domains: `staging-api.relaychess.com` on staging, `api.relaychess.com` on production.
 4. Check `/health` on both returns `{"ok":true,"store":"mongo"}`.
 
@@ -53,7 +54,12 @@ Settings → Branches → protect `main` and `prod`: require a PR and the **CI**
 2. Try it on staging.relaychess.com.
 3. Open a PR from `main` into `prod` and merge it. Production updates.
 
-Deploys restart the server, which ends games in progress, so release production when it's quiet.
+Deploys restart the server, which ends games in progress. So production releases go out **once a week, Friday 12:00 to 12:15 AM ET** (Thursday night):
+- From 11:45 PM the game page shows a banner warning that games may reset at 12, and during the window it says maintenance is underway.
+- After the restart, open pages (lobby, live games) reload themselves. Game pages don't, so players see their game ended.
+- Check `curl -s https://relay-chess-server.onrender.com/health`: `playing` is the number of games in progress.
+
+To change the window, edit `DEPLOY_WINDOW` in `apps/web/src/lib/deployWindow.ts`.
 
 ## First cutover
 - [ ] Staging works end to end: private game with a second browser, quick match with 4 tabs, rename yourself, see the leaderboard update.

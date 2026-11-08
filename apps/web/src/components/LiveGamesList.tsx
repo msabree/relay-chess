@@ -2,6 +2,8 @@ import React from 'react';
 import useLiveGames from '@/hooks/useLiveGames';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
+import { Chessboard } from 'react-chessboard';
+import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { getTimerLabel } from '@/components/TimerSelection';
 import { formatTimeRemaining, formatRelativeTime } from '@/utils/date';
 import { formatAnonUsername } from '@/utils/strings';
@@ -67,6 +69,21 @@ const LiveGamesList = () => {
               onClick={() => handleSpectateGame(game.roomId)}
               className="glass-effect border border-line rounded-xl p-6 hover:border-accent/50 hover:bg-fg/5 transition-all duration-200 text-left group"
             >
+              <div className="pointer-events-none mb-4">
+                <Chessboard
+                  options={{
+                    id: `live-${game.roomId}`,
+                    position: game.currentFen,
+                    allowDragging: false,
+                    showNotation: false,
+                    animationDurationInMs: 200,
+                    darkSquareStyle: { backgroundColor: BOARD_COLOR_SCHEMES[0].dark },
+                    lightSquareStyle: { backgroundColor: BOARD_COLOR_SCHEMES[0].light },
+                    boardStyle: { borderRadius: 6, overflow: 'hidden' },
+                  }}
+                />
+              </div>
+
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full border-2 ${

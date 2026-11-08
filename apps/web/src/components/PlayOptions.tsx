@@ -1,18 +1,13 @@
 import { useContext, useState } from 'react';
-import ReactGA from 'react-ga4';
 import { AppContext } from '@/contexts/App';
 import TimerSelection from '@/components/TimerSelection';
-import { CREATED_PRIVATE_GAME } from '@/constants';
 
 /** The three ways to start a game, shared by the landing page and home. */
 const PlayOptions = () => {
   const { setModal } = useContext(AppContext);
   const [code, setCode] = useState('');
 
-  const createRoom = () => {
-    setModal({ name: 'CREATING_PRIVATE_GAME' });
-    ReactGA.event({ category: CREATED_PRIVATE_GAME, action: 'Created Private Game' });
-  };
+  const createRoom = () => setModal({ name: 'CREATING_PRIVATE_GAME' });
   const joinTeam = () => code.trim() && setModal({ name: 'INVITE_TEAMMATES', data: { inviteCode: code.trim() } });
 
   return (
@@ -88,8 +83,8 @@ const PlayOptions = () => {
         <section className="rounded-2xl border border-line bg-surface p-6">
           <h3 className="text-lg font-semibold tracking-tight">Quick match</h3>
           <p className="mt-1.5 mb-4 text-sm text-fg-muted leading-relaxed">
-            Hop in the public queue and we&apos;ll seat you with three others. Some hours it&apos;s quiet, so a private
-            room is the sure bet.
+            Hop in the queue for a 2v2 with three others. We&apos;re still growing, so if it&apos;s quiet you can start a
+            1v1 instead.
           </p>
           <TimerSelection />
         </section>

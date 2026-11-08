@@ -13,6 +13,7 @@ const UserPlus = dynamic(() => import('lucide-react').then(mod => mod.UserPlus),
 const Copy = dynamic(() => import('lucide-react').then(mod => mod.Copy), { ssr: false });
 const Check = dynamic(() => import('lucide-react').then(mod => mod.Check), { ssr: false });
 import CompactTimerSelection from '@/components/CompactTimerSelection';
+import { QUEUE_TIMER_OPTIONS } from '@/constants';
 import useInviteTeammates from '@/hooks/useInviteTeammates';
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from 'next/router';
@@ -30,7 +31,7 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
   const router = useRouter();
   const user = useUser();
   const userId = user?.data?._id;
-  const [selectedTimer, setSelectedTimer] = useState('5,3');
+  const [selectedTimer, setSelectedTimer] = useState(QUEUE_TIMER_OPTIONS[0].time);
   const [isCopied, setIsCopied] = useState(false);
   const {teammateLobby, roomId, startTeamMatchmaking, matchmakingStarted} = useInviteTeammates({
     selectedTimer,
@@ -107,6 +108,7 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
             <CompactTimerSelection 
               selectedTimer={selectedTimer}
               onTimerChange={setSelectedTimer}
+              options={QUEUE_TIMER_OPTIONS}
             />
           </div>}
 

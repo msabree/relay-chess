@@ -5,6 +5,8 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters'),
   MONGODB_URL: z.string().optional().transform((v) => (v ? v : undefined)),
   DATABASE_NAME: z.string().default('relaychess'),
+  /** Games from before the current collection (the account era). Added to the live count. */
+  LEGACY_GAMES_PLAYED: z.coerce.number().int().min(0).default(0),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')

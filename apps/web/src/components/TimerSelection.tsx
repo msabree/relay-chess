@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import ReactGA from 'react-ga4';
-import { STARTED_SOLO_GAME, TIMER_OPTIONS } from '@/constants';
+import { QUEUE_TIMER_OPTIONS } from '@/constants';
 import Matchmaking from '@/modals/Matchmaking';
 import useOnlineStats from '@/hooks/useOnlineStats';
 
@@ -16,19 +15,16 @@ const TimerSelection = (_props: { variant?: 'dark' | 'light' }) => {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {TIMER_OPTIONS.map((item) => {
+      <div className="grid grid-cols-2 gap-2">
+        {QUEUE_TIMER_OPTIONS.map((item) => {
           const waiting = getQueueCount(item.time);
           const label = getTimerLabel(item.time, 'No clock');
-          const kind = item.typeKey === 'blitz' ? 'Blitz' : item.typeKey === 'rapid' ? 'Rapid' : 'Casual';
+          const kind = item.typeKey === 'blitz' ? 'Blitz' : 'Casual';
           return (
             <button
               key={item.time}
               type="button"
-              onClick={() => {
-                setSelectedTimer(item.time);
-                ReactGA.event({ category: STARTED_SOLO_GAME, action: `Chose Time Control ${label}` });
-              }}
+              onClick={() => setSelectedTimer(item.time)}
               className="flex h-[76px] flex-col items-center justify-center rounded-lg border border-line bg-bg hover:border-fg/40 transition-colors"
             >
               <span className="font-mono text-base font-semibold">{label}</span>

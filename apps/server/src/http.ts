@@ -42,9 +42,11 @@ export interface HttpDeps {
   config: Config;
   store: Store;
   liveGames: () => unknown[];
+  /** games in progress, private ones included */
+  playing: () => number;
 }
 
-export function createHttpApp({ config, store, liveGames }: HttpDeps) {
+export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -62,7 +64,8 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
   const contactLimit = limiter(5, 60 * 60_000);
   const playerLimit = limiter(30, 60_000);
 
-  app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind }));
+  // `playing` counts every game in progress (private too): check it's 0 before a deploy.
+  app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind, playing: playing() }));
 
   // ---- players (no accounts: a token is your identity) ----
 
@@ -106,6 +109,18 @@ export function createHttpApp({ config, store, liveGames }: HttpDeps) {
       if (!game.userIds.includes(req.who!.id)) return res.status(403).json({ error: 'not-a-player' });
       await store.setAnalysis(game.roomId, body.data.analysis);
       res.json({ ok: true });
+    }),
+  );
+
+  // Cached so homepage traffic doesn't hit the database.
+  let gamesPlayed = { n: 0, at: 0 };
+  app.get(
+    '/stats',
+    wrap(async (_req, res) => {
+      if (Date.now() - gamesPlayed.at > 60_000) {
+        gamesPlayed = { n: config.LEGACY_GAMES_PLAYED + (await store.countGames()), at: Date.now() };
+      }
+      res.json({ gamesPlayed: gamesPlayed.n });
     }),
   );
 

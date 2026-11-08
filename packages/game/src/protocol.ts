@@ -21,6 +21,8 @@ export interface Spectator {
 export interface RoomSnapshot {
   id: string;
   isPrivate: boolean;
+  /** friend room the players opened up: it shows on live games */
+  watchable: boolean;
   createdAt: number;
   game: GameState;
   spectators: Spectator[];
@@ -46,7 +48,10 @@ export interface LiveGame {
 
 export interface LobbyStats {
   online: number;
-  queues: { timeControl: string; count: number }[];
+  /** games in progress right now, private ones included (count only) */
+  playing: number;
+  /** count: players waiting. ready: how many of them will start a 1v1 now. */
+  queues: { timeControl: string; count: number; ready: number }[];
 }
 
 export interface Party {
@@ -66,6 +71,7 @@ export interface ClientToServerEvents {
   'room:leave': (p: RoomRef) => void;
   'room:seat': (p: RoomRef & { team: Color | 'spectator' }, ack: Cb) => void;
   'room:time': (p: RoomRef & { timeControl: string }, ack: Cb) => void;
+  'room:watchable': (p: RoomRef & { watchable: boolean }, ack: Cb) => void;
   'game:move': (p: RoomRef & { from: string; to: string; promotion?: string }, ack: Cb) => void;
   'game:resign': (p: RoomRef, ack: Cb) => void;
   'game:abort': (p: RoomRef, ack: Cb) => void;
@@ -76,6 +82,8 @@ export interface ClientToServerEvents {
   'lobby:unwatch': () => void;
   'queue:join': (p: { timeControl: string }, ack: Cb) => void;
   'queue:leave': (ack: Cb) => void;
+  /** Start a 1v1 with the next player who also opts in, instead of waiting for a full 2v2. */
+  'queue:ready': (ack: Cb) => void;
   'party:join': (p: { partyId: string }, ack: Cb<{ party: Party }>) => void;
   'party:leave': (p: { partyId: string }) => void;
   'party:queue': (p: { partyId: string; timeControl: string }, ack: Cb) => void;
@@ -91,10 +99,12 @@ export interface ServerToClientEvents {
   'party:state': (party: Party) => void;
   'queue:state': (p: { timeControl: string | null }) => void;
   'match:found': (p: { roomId: string }) => void;
+  /** Sent on connect. A new bootId means the server restarted (a release). */
+  'server:hello': (p: { bootId: string }) => void;
 }
 
 /** Time controls offered in public matchmaking. */
-export const QUEUE_TIME_CONTROLS = ['5+3', '10+0', '10+3', 'untimed'] as const;
+export const QUEUE_TIME_CONTROLS = ['5+5', 'untimed'] as const;
 
 /**
  * "M+I" (minutes + increment seconds) or "untimed".

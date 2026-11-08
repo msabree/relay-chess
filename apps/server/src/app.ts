@@ -8,7 +8,12 @@ import type { Store } from './store/types';
 /** HTTP API and socket.io on one port. */
 export function createServer(config: Config, store: Store, opts: { abandonMs?: number; flushMs?: number } = {}) {
   let realtime: ReturnType<typeof attachRealtime> | undefined;
-  const app = createHttpApp({ config, store, liveGames: () => realtime?.rooms.liveGames() ?? [] });
+  const app = createHttpApp({
+    config,
+    store,
+    liveGames: () => realtime?.rooms.liveGames() ?? [],
+    playing: () => realtime?.rooms.playingCount() ?? 0,
+  });
   const http = createHttpServer(app);
   const io: IO = new Server(http, { cors: { origin: config.CORS_ORIGINS } });
   realtime = attachRealtime(io, { config, store, ...opts });

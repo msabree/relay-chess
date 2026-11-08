@@ -190,21 +190,22 @@ describe('matchmaking', () => {
   it('four solo players with the same time control get a public 2v2', async () => {
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     const found = ps.map((p) => next(p.socket, 'match:found'));
-    for (const p of ps) expect(await p.socket.emitWithAck('queue:join', { timeControl: '5+3' })).toEqual({ ok: true });
+    for (const p of ps) expect(await p.socket.emitWithAck('queue:join', { timeControl: '5+5' })).toEqual({ ok: true });
     const ids = (await Promise.all(found)).map(([m]) => m.roomId);
     expect(new Set(ids).size).toBe(1);
     const room = t.server.rooms.get(ids[0]!)!;
     expect(room.isPrivate).toBe(false);
     expect(room.game.teams.w).toHaveLength(2);
     expect(room.game.teams.b).toHaveLength(2);
-    expect(room.game.timeControl).toEqual({ initialMs: 300_000, incrementMs: 3000 });
+    expect(room.game.timeControl).toEqual({ initialMs: 300_000, incrementMs: 5000 });
   });
 
   it('does not mix time controls and only offers the listed ones', async () => {
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
-    for (const [i, p] of ps.entries()) await p.socket.emitWithAck('queue:join', { timeControl: i < 3 ? '5+3' : '10+0' });
+    for (const [i, p] of ps.entries()) await p.socket.emitWithAck('queue:join', { timeControl: i < 3 ? '5+5' : 'untimed' });
     expect(t.server.rooms.size).toBe(0);
     expect(await ps[0]!.socket.emitWithAck('queue:join', { timeControl: '7+7' })).toEqual({ ok: false, error: 'invalid-input' });
+    expect(await ps[0]!.socket.emitWithAck('queue:join', { timeControl: '10+0' })).toEqual({ ok: false, error: 'invalid-input' });
   });
 
   it('a party queues as a team against solo players', async () => {
@@ -215,14 +216,29 @@ describe('matchmaking', () => {
     if (!joined.ok) throw new Error(joined.error);
     expect(joined.party.members.map((m) => m.isHost)).toEqual([true, false]);
 
-    expect(await friend!.socket.emitWithAck('party:queue', { partyId, timeControl: '10+0' })).toEqual({ ok: false, error: 'not-host' });
+    expect(await friend!.socket.emitWithAck('party:queue', { partyId, timeControl: 'untimed' })).toEqual({ ok: false, error: 'not-host' });
     const found = [host, friend, s1, s2].map((p) => next(p!.socket, 'match:found'));
-    expect(await host!.socket.emitWithAck('party:queue', { partyId, timeControl: '10+0' })).toEqual({ ok: true });
-    await s1!.socket.emitWithAck('queue:join', { timeControl: '10+0' });
-    await s2!.socket.emitWithAck('queue:join', { timeControl: '10+0' });
+    expect(await host!.socket.emitWithAck('party:queue', { partyId, timeControl: 'untimed' })).toEqual({ ok: true });
+    await s1!.socket.emitWithAck('queue:join', { timeControl: 'untimed' });
+    await s2!.socket.emitWithAck('queue:join', { timeControl: 'untimed' });
     const [roomId] = (await Promise.all(found)).map(([m]) => m.roomId);
     const room = t.server.rooms.get(roomId!)!;
     expect(room.game.teams.w.map((p) => p.id).sort()).toEqual([host!.user.id, friend!.user.id].sort());
+  });
+
+  it('two players who choose "start now" get a 1v1; the rest keep waiting', async () => {
+    const [a, b, c] = await Promise.all([1, 2, 3].map(() => t.player()));
+    expect(await a!.socket.emitWithAck('queue:ready')).toEqual({ ok: false, error: 'not-queued' });
+    for (const p of [a, b, c]) await p!.socket.emitWithAck('queue:join', { timeControl: '5+5' });
+    expect(await a!.socket.emitWithAck('queue:ready')).toEqual({ ok: true });
+    expect(t.server.rooms.size).toBe(0); // a lone ready player waits
+    expect(t.server.matchmaker.counts().get('5+5')).toEqual({ count: 3, ready: 1 });
+    const found = [a, b].map((p) => next(p!.socket, 'match:found'));
+    expect(await b!.socket.emitWithAck('queue:ready')).toEqual({ ok: true });
+    const [roomId] = (await Promise.all(found)).map(([m]) => m.roomId);
+    const room = t.server.rooms.get(roomId!)!;
+    expect([room.game.teams.w.length, room.game.teams.b.length]).toEqual([1, 1]);
+    expect(t.server.matchmaker.soloTimeControl(c!.user.id)).toBe('5+5'); // c didn't opt in
   });
 
   it('lobby watchers see stats and live public games', async () => {
@@ -236,5 +252,41 @@ describe('matchmaking', () => {
     const [games] = await live;
     expect(games[0]).toMatchObject({ moveCount: 0, timeControl: 'untimed' });
     await sleep(10);
+  });
+
+  it('keeps friend rooms off live games unless a player allows watching, but counts them as playing', async () => {
+    const watcher = await t.player();
+    const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
+    const room = await privateRoom(ps);
+    // Opened up during setup: still not listed, since joining then takes a seat.
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
+    const setup = await watcher.socket.emitWithAck('lobby:watch');
+    if (!setup.ok) throw new Error(setup.error);
+    expect(setup.games).toEqual([]);
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: false })).toEqual({ ok: true });
+
+    await play(ps, room.id, FOOLS_MATE.slice(0, 2));
+    const before = await watcher.socket.emitWithAck('lobby:watch');
+    if (!before.ok) throw new Error(before.error);
+    expect(before.games).toEqual([]);
+    expect(before.stats.playing).toBe(1);
+
+    expect(await watcher.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toMatchObject({ ok: false });
+    const listed = next(watcher.socket, 'live:games', (games) => games.length === 1);
+    expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
+    const [games] = await listed;
+    expect(games[0]).toMatchObject({ roomId: room.id, moveCount: 2 });
+
+    // Someone arriving from live games mid-game only gets to watch.
+    const stranger = await t.player();
+    const joined = await stranger.socket.emitWithAck('room:join', { roomId: room.id });
+    if (!joined.ok) throw new Error(joined.error);
+    expect([...joined.room.game.teams.w, ...joined.room.game.teams.b].map((p) => p.id)).not.toContain(stranger.user.id);
+    expect(joined.room.spectators.map((s) => s.id)).toContain(stranger.user.id);
+    expect(await stranger.socket.emitWithAck('room:seat', { roomId: room.id, team: 'w' })).toMatchObject({ ok: false });
+
+    const done = next(watcher.socket, 'lobby:stats', (st) => st.playing === 0);
+    await play(ps, room.id, FOOLS_MATE.slice(2));
+    await done;
   });
 });

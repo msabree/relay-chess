@@ -36,6 +36,12 @@ describe('players', () => {
   });
 });
 
+describe('stats', () => {
+  it('counts games played', async () => {
+    expect((await t.api('/stats')).body).toEqual({ gamesPlayed: 0 });
+  });
+});
+
 describe('leaderboard buckets', () => {
   it('days roll over at UTC midnight and weeks start on Monday', () => {
     const thu = new Date('2026-10-01T23:59:00Z');
@@ -50,7 +56,7 @@ describe('leaderboard buckets', () => {
 
 describe('misc', () => {
   it('health, contact, leaderboard', async () => {
-    expect((await t.api('/health')).body).toEqual({ ok: true, store: 'memory' });
+    expect((await t.api('/health')).body).toEqual({ ok: true, store: 'memory', playing: 0 });
     expect((await t.api('/contact', { method: 'POST', json: { name: 'A', email: 'nope', message: 'hi' } })).status).toBe(400);
     expect((await t.api('/contact', { method: 'POST', json: { name: 'A', email: 'a@b.co', message: 'hi' } })).body).toEqual({ ok: true });
     expect(t.store.contacts).toHaveLength(1);

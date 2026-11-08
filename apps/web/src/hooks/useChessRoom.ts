@@ -59,6 +59,7 @@ const useChessRoom = (roomId: string) => {
     changeTeam: (team: Color | 'spectator') => request(socket, 'room:seat', { roomId, team }),
     /** timer in the web's "5,3" format */
     setTimer: (timer: string): Promise<Ack> => request(socket, 'room:time', { roomId, timeControl: toServerTimer(timer) }),
+    setWatchable: (watchable: boolean): Promise<Ack> => request(socket, 'room:watchable', { roomId, watchable }),
   };
 };
 

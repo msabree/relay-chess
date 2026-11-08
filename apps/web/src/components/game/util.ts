@@ -1,3 +1,4 @@
+import { describeResult } from '@/lib/result';
 import { nextMover, turn, type Color, type GameState, type Player } from '@relay-chess/game';
 
 export const initials = (name: string) => {
@@ -19,30 +20,7 @@ export function relayOrder(game: GameState, c: Color): Player[] {
 export function resultText(game: GameState): { title: string; detail: string } {
   const r = game.result;
   if (!r) return { title: '', detail: '' };
-  const w = r.winner ? colorName(r.winner) : '';
-  const l = r.winner ? colorName(r.winner === 'w' ? 'b' : 'w') : '';
-  switch (r.reason) {
-    case 'checkmate':
-      return { title: `${w} wins`, detail: 'by checkmate' };
-    case 'timeout':
-      return { title: `${w} wins`, detail: `${l} ran out of time` };
-    case 'resign':
-      return { title: `${w} wins`, detail: `${l} resigned` };
-    case 'abandoned':
-      return { title: `${w} wins`, detail: `${l} left the game` };
-    case 'agreement':
-      return { title: 'Draw', detail: 'by agreement' };
-    case 'stalemate':
-      return { title: 'Draw', detail: 'by stalemate' };
-    case 'threefold-repetition':
-      return { title: 'Draw', detail: 'by repetition' };
-    case 'insufficient-material':
-      return { title: 'Draw', detail: 'not enough material to mate' };
-    case 'fifty-move-rule':
-      return { title: 'Draw', detail: 'by the 50-move rule' };
-    case 'aborted':
-      return { title: 'Game aborted', detail: 'no result recorded' };
-  }
+  return describeResult(r.winner, r.reason);
 }
 
 export const formatClock = (ms: number) => {

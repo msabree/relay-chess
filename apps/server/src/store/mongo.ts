@@ -41,6 +41,10 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     async setAnalysis(roomId, analysis) {
       await games.updateOne({ roomId }, { $set: { analysis } });
     },
+    async countGames() {
+      // Reads collection metadata, no scan.
+      return games.estimatedDocumentCount();
+    },
     async addScore({ outcome, period, key, userId, name, expiresAt }) {
       await scores.updateOne(
         { period, key, userId },

@@ -11,9 +11,11 @@ interface UseMatchmakingProps {
 
 const useMatchmaking = ({ queueType, selectedTimer, enabled }: UseMatchmakingProps) => {
   const [newGameRoomId, setNewGameRoomId] = useState<string | undefined>(undefined);
+  const [ready, setReady] = useState(false);
   const { socket, connected } = useSocket();
 
   useEffect(() => {
+    setReady(false);
     if (!socket || !connected || !enabled) return;
     const onMatch = (p: { roomId: string }) => setNewGameRoomId(p.roomId);
     socket.on('match:found', onMatch);
@@ -24,7 +26,13 @@ const useMatchmaking = ({ queueType, selectedTimer, enabled }: UseMatchmakingPro
     };
   }, [socket, connected, enabled, queueType, selectedTimer]);
 
-  return { newGameRoomId };
+  /** Solo queue only: start a 1v1 with the next player who also opts in. */
+  const startNow = async () => {
+    const res = await request(socket, 'queue:ready');
+    if (res.ok) setReady(true);
+  };
+
+  return { newGameRoomId, ready, startNow };
 };
 
 export default useMatchmaking;

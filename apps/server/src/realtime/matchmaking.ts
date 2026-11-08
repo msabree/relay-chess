@@ -4,7 +4,8 @@ import type { Identity } from '../auth';
  * Public matchmaking, same rules as the original server:
  * 1. A queued party plays another party of the same size and time control,
  * 2. or enough solo players to fill the other side,
- * 3. otherwise any 4 solo players with the same time control make a 2v2.
+ * 3. otherwise any 4 solo players with the same time control make a 2v2,
+ * 4. otherwise two solo players who chose "start now" play a 1v1.
  */
 export interface Match {
   timeControl: string;
@@ -18,6 +19,8 @@ interface SoloEntry {
   who: Identity;
   timeControl: string;
   at: number;
+  /** will start a 1v1 instead of waiting for 4 */
+  ready: boolean;
 }
 interface PartyEntry {
   partyId: string;
@@ -41,8 +44,17 @@ export class Matchmaker {
 
   joinSolo(who: Identity, timeControl: string) {
     this.removeFromParties(who.id);
-    this.solo.set(who.id, { who, timeControl, at: this.now });
+    this.solo.set(who.id, { who, timeControl, at: this.now, ready: false });
     this.run();
+  }
+
+  /** Opt in to a 1v1. False if not in the solo queue. */
+  setReady(userId: string): boolean {
+    const e = this.solo.get(userId);
+    if (!e) return false;
+    e.ready = true;
+    this.run();
+    return true;
   }
 
   leaveSolo(userId: string) {
@@ -70,11 +82,15 @@ export class Matchmaker {
     return this.solo.get(userId)?.timeControl ?? null;
   }
 
-  /** Players waiting per time control. */
-  counts(): Map<string, number> {
-    const counts = new Map<string, number>();
-    for (const s of this.solo.values()) counts.set(s.timeControl, (counts.get(s.timeControl) ?? 0) + 1);
-    for (const p of this.parties.values()) counts.set(p.timeControl, (counts.get(p.timeControl) ?? 0) + p.members.length);
+  /** Players waiting per time control, and how many of them are ready to start now. */
+  counts(): Map<string, { count: number; ready: number }> {
+    const counts = new Map<string, { count: number; ready: number }>();
+    const add = (tc: string, n: number, ready: number) => {
+      const c = counts.get(tc) ?? { count: 0, ready: 0 };
+      counts.set(tc, { count: c.count + n, ready: c.ready + ready });
+    };
+    for (const s of this.solo.values()) add(s.timeControl, 1, s.ready ? 1 : 0);
+    for (const p of this.parties.values()) add(p.timeControl, p.members.length, 0);
     return counts;
   }
 
@@ -142,6 +158,13 @@ export class Matchmaker {
         const four = this.shuffle(group).slice(0, 4);
         for (const p of four) this.solo.delete(p.who.id);
         return { timeControl: tc, white: four.slice(0, 2).map((p) => p.who), black: four.slice(2).map((p) => p.who), partyIds: [] };
+      }
+      const ready = group.filter((s) => s.ready);
+      if (ready.length >= 2) {
+        const [w, b] = this.shuffle(ready);
+        this.solo.delete(w!.who.id);
+        this.solo.delete(b!.who.id);
+        return { timeControl: tc, white: [w!.who], black: [b!.who], partyIds: [] };
       }
     }
     return null;

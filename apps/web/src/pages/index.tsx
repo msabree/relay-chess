@@ -1,15 +1,16 @@
-import { useContext, useEffect } from 'react';
+import { useContext } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import ReactGA from 'react-ga4';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import PlayOptions from '@/components/PlayOptions';
+import LiveGamesStrip from '@/components/LiveGamesStrip';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
-import { ANALYTICS_TEST_MODE, CREATED_PRIVATE_GAME, DEMO_VIDEO, GOOGLE_ANALYTICS_ID, SITE_URL } from '@/constants';
+import { DEMO_VIDEO, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
+import useGamesPlayed from '@/hooks/useGamesPlayed';
 import { REPO_URL } from '@/lib/github';
 
 const STEPS = [
@@ -33,10 +34,8 @@ const STEPS = [
 const LandingPage = () => {
   const { setModal, modal } = useContext(AppContext);
   const { totalOnline } = useOnlineStats();
+  const gamesPlayed = useGamesPlayed();
 
-  useEffect(() => {
-    if (GOOGLE_ANALYTICS_ID) ReactGA.initialize(GOOGLE_ANALYTICS_ID, { testMode: ANALYTICS_TEST_MODE });
-  }, []);
 
   return (
     <>
@@ -66,6 +65,15 @@ const LandingPage = () => {
               <br />
               with friends.
             </h1>
+            {gamesPlayed ? (
+              <p className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+                Over{' '}
+                <span className="rounded-md bg-accent px-2 tabular-nums text-accent-fg">
+                  {(gamesPlayed >= 1000 ? Math.floor(gamesPlayed / 100) * 100 : gamesPlayed).toLocaleString('en-US')}
+                </span>{' '}
+                games played!
+              </p>
+            ) : null}
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-fg-muted">
               Two teams, one board. You and your partner take turns making your team&apos;s moves, with no huddles and
               no take-backs. It&apos;s part strategy, part trust, and a lot of laughing at moves you never would have made.
@@ -73,39 +81,29 @@ const LandingPage = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() => {
-                  setModal({ name: 'CREATING_PRIVATE_GAME' });
-                  ReactGA.event({ category: CREATED_PRIVATE_GAME, action: 'Created Private Game' });
-                }}
+                onClick={() => setModal({ name: 'CREATING_PRIVATE_GAME' })}
                 className="h-12 rounded-xl bg-accent px-6 text-base font-semibold text-accent-fg hover:bg-accent/90 transition-colors"
               >
                 Start a game with friends
               </button>
-              <Link
-                href="/live-games"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-6 text-base font-medium hover:bg-fg/5 transition-colors"
-              >
-                Watch a live game
-              </Link>
             </div>
             <p className="mt-4 text-sm text-fg-subtle">
               No account needed. {totalOnline > 1 ? `${totalOnline} people are around right now.` : 'Share a link and you are playing.'}
             </p>
           </div>
           <figure className="overflow-hidden rounded-2xl border border-line bg-ink-950 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)]">
-            <video
+            <iframe
               src={DEMO_VIDEO}
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="metadata"
-              className="block aspect-video w-full bg-ink-950"
-              aria-label="A 2v2 Relay Chess game being played"
+              title="A 2v2 Relay Chess game being played"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              className="block aspect-video w-full border-0 bg-ink-950"
             />
           </figure>
         </section>
+
+        {/* Live games (hidden when none are running) */}
+        <LiveGamesStrip />
 
         {/* How it works */}
         <section className="border-y border-line bg-surface">
