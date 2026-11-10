@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { next, nextState, sleep, startServer, type Player } from './helpers';
 
 let t: Awaited<ReturnType<typeof startServer>>;
-beforeEach(async () => (t = await startServer({ abandonMs: 100 })));
+beforeEach(async () => (t = await startServer({ abandonMs: 100, lobbyMs: 150 })));
 afterEach(async () => t.stop());
 
 /** Create a private room as players[0] and have everyone join. */
@@ -33,6 +33,17 @@ async function play(players: Player[], roomId: string, moves: [string, string][]
     room = await update;
   }
   return room;
+}
+
+/** Two players opt into "start now" and get a 1v1; both have joined the room. */
+async function quickMatch() {
+  const [a, b] = await Promise.all([1, 2].map(() => t.player()));
+  for (const p of [a, b]) await p!.socket.emitWithAck('queue:join', { timeControl: '5+5' });
+  const found = next(a!.socket, 'match:found');
+  for (const p of [a, b]) await p!.socket.emitWithAck('queue:ready');
+  const [{ roomId }] = await found;
+  for (const p of [a, b]) await p!.socket.emitWithAck('room:join', { roomId });
+  return { roomId, a: a!, b: b! };
 }
 
 const FOOLS_MATE: [string, string][] = [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']];
@@ -165,8 +176,10 @@ describe('private rooms', () => {
     const after = await play(ps, room.id, [['e2', 'e4'], ['e7', 'e5']]);
     const black = ps.find((p) => p.user.id === after.game.teams.b[0]!.id)!;
     const white = ps.find((p) => p !== black)!;
+    const away = nextState(white.socket, (r) => !!r.deadlines.b);
     const over = nextState(white.socket, (r) => r.game.status === 'over', 1000);
     black.socket.disconnect();
+    expect((await away).deadlines.b).toBeGreaterThan(Date.now());
     expect((await over).game.result).toEqual({ winner: 'w', reason: 'abandoned' });
   });
 
@@ -239,6 +252,37 @@ describe('matchmaking', () => {
     const room = t.server.rooms.get(roomId!)!;
     expect([room.game.teams.w.length, room.game.teams.b.length]).toEqual([1, 1]);
     expect(t.server.matchmaker.soloTimeControl(c!.user.id)).toBe('5+5'); // c didn't opt in
+  });
+
+  it('before the first move, a new identity can take an away seat in a quick match', async () => {
+    const { roomId, a, b } = await quickMatch();
+    const c = await t.player();
+    const away = nextState(a.socket, (r) => !!r.deadlines.b || !!r.deadlines.w);
+    b.socket.disconnect();
+    const snap = await away;
+    const side = snap.deadlines.w ? 'w' : 'b';
+    expect(snap.deadlines[side]).toBeGreaterThan(Date.now());
+    const joined = await c.socket.emitWithAck('room:join', { roomId });
+    expect(joined.ok && joined.room.spectators.some((s) => s.id === c.user.id)).toBe(true);
+    const other = side === 'w' ? 'b' : 'w';
+    expect(await c.socket.emitWithAck('room:seat', { roomId, team: other })).toEqual({ ok: false, error: 'no-open-seat' });
+    const seated = nextState(a.socket, (r) => r.game.teams[side][0]!.id === c.user.id);
+    expect(await c.socket.emitWithAck('room:seat', { roomId, team: side })).toEqual({ ok: true });
+    expect((await seated).deadlines).toEqual({});
+  });
+
+  it('either player can cancel a quick match before the first move', async () => {
+    const { roomId, a } = await quickMatch();
+    const over = nextState(a.socket, (r) => r.game.status === 'over');
+    expect(await a.socket.emitWithAck('game:abort', { roomId })).toEqual({ ok: true });
+    expect((await over).game.result).toMatchObject({ winner: null, reason: 'aborted', by: a.user.id });
+  });
+
+  it('a quick match closes itself if a seat stays empty before the first move', async () => {
+    const { a, b } = await quickMatch();
+    const over = nextState(a.socket, (r) => r.game.status === 'over', 1000);
+    b.socket.disconnect();
+    expect((await over).game.result).toEqual({ winner: null, reason: 'aborted' });
   });
 
   it('lobby watchers see stats and live public games', async () => {

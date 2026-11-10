@@ -43,7 +43,7 @@ const S = {
   partyQueue: z.object({ partyId: z.string().regex(PARTY_ID), timeControl: queueTimeControl }),
 };
 
-export function attachRealtime(io: IO, deps: { config: Config; store: Store; abandonMs?: number; flushMs?: number }) {
+export function attachRealtime(io: IO, deps: { config: Config; store: Store; abandonMs?: number; lobbyMs?: number; flushMs?: number }) {
   const { config, store } = deps;
   const online = new Map<string, number>();
   let statsDirty = false;
@@ -53,6 +53,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
   const rooms = new RoomService({
     store,
     abandonMs: deps.abandonMs,
+    lobbyMs: deps.lobbyMs,
     onState: (r) => io.to(`room:${r.id}`).emit('room:state', rooms.snapshot(r)),
     onChat: (r, message) => io.to(`room:${r.id}`).emit('chat:message', { roomId: r.id, message }),
     onLiveChanged: () => (liveDirty = true),

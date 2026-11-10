@@ -3,6 +3,7 @@ import {
   abandon,
   abort,
   applyMove,
+  cancel,
   checkTimeout,
   colorOf,
   createGame,
@@ -14,6 +15,7 @@ import {
   resign,
   setConnected,
   setTimeControl,
+  takeSeat,
   teamGone,
   turn,
   timeControlKey,
@@ -52,6 +54,10 @@ export interface Room {
   lastActivity: number;
   flagTimer?: NodeJS.Timeout;
   abandonTimers: Partial<Record<Color, NodeJS.Timeout>>;
+  /** when each running abandon timer fires (server time) */
+  deadlines: Partial<Record<Color, number>>;
+  /** status the abandon timers were set for; they reset when it changes */
+  timersFor?: GameState['status'];
   /** resolves once the result is stored (tests await it) */
   saved?: Promise<void>;
 }
@@ -67,8 +73,10 @@ export interface RoomServiceDeps {
   /** public room list changed */
   onLiveChanged: () => void;
   now?: () => number;
-  /** how long a whole team can be gone before it forfeits */
+  /** how long a whole team can be gone mid-game before it forfeits */
   abandonMs?: number;
+  /** how long a quick-match seat can stay empty before the first move before the room closes */
+  lobbyMs?: number;
   /** idle rooms are dropped after this */
   idleMs?: number;
   log?: (msg: string, err?: unknown) => void;
@@ -79,12 +87,14 @@ export class RoomService {
   private chatRate = new Map<string, number[]>();
   private now: () => number;
   private abandonMs: number;
+  private lobbyMs: number;
   private idleMs: number;
   private log: (msg: string, err?: unknown) => void;
 
   constructor(private deps: RoomServiceDeps) {
     this.now = deps.now ?? Date.now;
-    this.abandonMs = deps.abandonMs ?? 60_000;
+    this.abandonMs = deps.abandonMs ?? 3 * 60_000;
+    this.lobbyMs = deps.lobbyMs ?? 60_000;
     this.idleMs = deps.idleMs ?? 2 * 60 * 60_000;
     this.log = deps.log ?? ((m, e) => console.error(m, e ?? ''));
   }
@@ -112,6 +122,7 @@ export class RoomService {
       presence: new Map(),
       lastActivity: this.now(),
       abandonTimers: {},
+      deadlines: {},
     };
     // Matchmade players haven't opened the room yet.
     for (const p of [...room.game.teams.w, ...room.game.teams.b]) room.game = setConnected(room.game, p.id, false);
@@ -130,6 +141,7 @@ export class RoomService {
       spectators: [...room.spectators.values()],
       chat: room.chat,
       rematchRoomId: room.rematchRoomId,
+      deadlines: room.deadlines,
       serverNow: this.now(),
     };
   }
@@ -181,12 +193,20 @@ export class RoomService {
     return this.update(roomId, who, (room) => {
       if (!room.presence.has(who.id)) return fail('not-in-room');
       if (team === 'spectator') {
+        if (!room.isPrivate) return fail('not-allowed');
         const r = leaveTeam(room.game, who.id);
         if (!r.ok) return r;
         room.spectators.set(who.id, { id: who.id, name: who.name });
         return r;
       }
-      const r = joinTeam(room.game, { id: who.id, name: who.name }, team);
+      // Quick matches have fixed seats: you can only take one whose player left.
+      const g = room.game;
+      const away = g.teams[team].find((p) => !p.connected);
+      const r = room.isPrivate
+        ? joinTeam(g, { id: who.id, name: who.name }, team)
+        : away
+          ? takeSeat(g, { id: who.id, name: who.name }, away.id)
+          : fail('no-open-seat');
       if (r.ok) room.spectators.delete(who.id);
       return r;
     });
@@ -346,40 +366,56 @@ export class RoomService {
       clearTimeout(room.abandonTimers[c]);
       delete room.abandonTimers[c];
     }
+    room.deadlines = {};
   }
 
   private schedule(room: Room) {
-    if (room.game.status !== 'playing') return this.clearTimers(room);
+    const g = room.game;
+    if (g.status === 'over') return this.clearTimers(room);
 
     clearTimeout(room.flagTimer);
-    const ms = msUntilFlag(room.game, this.now());
-    room.flagTimer =
-      ms === null
-        ? undefined
-        : setTimeout(() => {
-            const next = checkTimeout(room.game, this.now());
-            if (next !== room.game) {
-              room.game = next;
-              this.changed(room);
-            } else this.schedule(room);
-          }, ms + 10);
+    room.flagTimer = undefined;
+    const ms = g.status === 'playing' ? msUntilFlag(g, this.now()) : null;
+    if (ms !== null) {
+      room.flagTimer = setTimeout(() => {
+        const next = checkTimeout(room.game, this.now());
+        if (next !== room.game) {
+          room.game = next;
+          this.changed(room);
+        } else this.schedule(room);
+      }, ms + 10);
+    }
 
+    // A whole side gone: mid-game it forfeits after abandonMs; in a quick match
+    // that hasn't started, the room closes after lobbyMs. Private lobbies just wait.
+    if (room.timersFor !== g.status) {
+      for (const c of ['w', 'b'] as const) clearTimeout(room.abandonTimers[c]);
+      room.abandonTimers = {};
+      room.deadlines = {};
+      room.timersFor = g.status;
+    }
+    const lobby = g.status === 'waiting';
     for (const c of ['w', 'b'] as const) {
-      const gone = teamGone(room.game, c);
+      const gone = (!lobby || !room.isPrivate) && teamGone(g, c);
       if (gone && !room.abandonTimers[c]) {
+        const wait = lobby ? this.lobbyMs : this.abandonMs;
+        room.deadlines = { ...room.deadlines, [c]: this.now() + wait };
         room.abandonTimers[c] = setTimeout(() => {
           delete room.abandonTimers[c];
-          if (room.game.status === 'playing' && teamGone(room.game, c)) {
-            const r = abandon(room.game, c);
-            if (r.ok) {
-              room.game = r.state;
-              this.changed(room);
-            }
+          const { [c]: _, ...rest } = room.deadlines;
+          room.deadlines = rest;
+          if (!teamGone(room.game, c)) return;
+          const r = room.game.status === 'waiting' ? cancel(room.game) : abandon(room.game, c);
+          if (r.ok) {
+            room.game = r.state;
+            this.changed(room);
           }
-        }, this.abandonMs);
+        }, wait);
       } else if (!gone && room.abandonTimers[c]) {
         clearTimeout(room.abandonTimers[c]);
         delete room.abandonTimers[c];
+        const { [c]: _, ...rest } = room.deadlines;
+        room.deadlines = rest;
       }
     }
   }

@@ -21,6 +21,8 @@ interface ChessGameContextProps {
   room: RoomSnapshot | undefined;
   /** remaining ms per side right now (null when untimed) */
   clocks: Record<Color, number> | null;
+  /** local-time deadline per away side: forfeit mid-game, or the quick match closes before it starts */
+  deadlines: Partial<Record<Color, number>>;
   isPrivateGame: boolean;
   roomId: string;
   isLoggedIn: boolean;
@@ -77,6 +79,7 @@ export const ChessGameContext = createContext<ChessGameContextProps>({
   game: undefined,
   room: undefined,
   clocks: null,
+  deadlines: {},
   isPrivateGame: false,
   roomId: '',
   isLoggedIn: false,
@@ -216,6 +219,11 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
   if (game?.status !== 'over') frozen.current = live;
   const clocks = game?.status === 'over' ? (frozen.current ?? live) : live;
   const clockFor = (c: Color) => (clocks ? formatClock(clocks[c]) : '');
+  const deadlines = useMemo(() => {
+    const out: Partial<Record<Color, number>> = {};
+    for (const [c, at] of Object.entries(room.room?.deadlines ?? {})) out[c as Color] = at - room.clockOffset;
+    return out;
+  }, [room.room?.deadlines, room.clockOffset]);
   const bottom: Color = myColor ?? 'w';
   const top: Color = bottom === 'w' ? 'b' : 'w';
   const names = new Map([...(game?.teams.w ?? []), ...(game?.teams.b ?? [])].map((p) => [p.id, p.name]));
@@ -247,6 +255,7 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
     game,
     room: room.room ?? undefined,
     clocks,
+    deadlines,
     isPrivateGame: room.room?.isPrivate ?? false,
     roomId,
     isLoggedIn,

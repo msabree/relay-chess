@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   abandon,
   abort,
+  cancel,
   applyMove,
   checkTimeout,
   createGame,
@@ -14,6 +15,7 @@ import {
   resign,
   setConnected,
   setTimeControl,
+  takeSeat,
   teamGone,
   type GameState,
   type Outcome,
@@ -78,6 +80,20 @@ describe('seating', () => {
   it('can prefill teams (matchmaking)', () => {
     const s = createGame({ id: 'g', teams: { w: [{ id: 'a', name: 'A' }], b: [{ id: 'b', name: 'B' }] } });
     expect(nextMover(s)!.id).toBe('a');
+  });
+});
+
+describe('taking an away seat', () => {
+  it('a new player takes the seat of someone who left, keeping relay order', () => {
+    const s = unwrap(takeSeat(setConnected(seated(), 'ana', false), { id: 'eve', name: 'Eve' }, 'ana'));
+    expect(s.teams.w.map((p) => p.id)).toEqual(['eve', 'ben']);
+    expect(nextMover(s)!.id).toBe('eve');
+  });
+
+  it('only away seats, only before the first move, and not if you already have one', () => {
+    expect(takeSeat(seated(), { id: 'eve', name: 'Eve' }, 'ana')).toEqual({ ok: false, error: 'seat-taken' });
+    expect(takeSeat(setConnected(seated(), 'ana', false), { id: 'cat', name: 'Cat' }, 'ana')).toEqual({ ok: false, error: 'seat-taken' });
+    expect(takeSeat(setConnected(started(), 'ana', false), { id: 'eve', name: 'Eve' }, 'ana')).toEqual({ ok: false, error: 'not-waiting' });
   });
 });
 
@@ -193,6 +209,12 @@ describe('results', () => {
     expect(unwrap(abort(s, 'cat')).result?.reason).toBe('aborted');
     s = mv(s, 'cat', 'e7', 'e5');
     expect(abort(s, 'cat')).toEqual({ ok: false, error: 'cannot-abort' });
+  });
+
+  it('abort works before the first move too; cancel needs no player', () => {
+    expect(unwrap(abort(seated(), 'ben')).result).toEqual({ winner: null, reason: 'aborted', by: 'ben' });
+    expect(abort(seated(), 'zed')).toEqual({ ok: false, error: 'not-seated' });
+    expect(unwrap(cancel(seated())).result).toEqual({ winner: null, reason: 'aborted' });
   });
 
   it('abandon forfeits the team that left', () => {

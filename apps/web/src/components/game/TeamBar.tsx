@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { nextMover, type Color } from '@relay-chess/game';
 import { ChessGameContext } from '@/contexts/ChessGame';
 import { colorName, formatClock, initials, relayOrder, sideToMove } from './util';
@@ -8,7 +8,15 @@ import { colorName, formatClock, initials, relayOrder, sideToMove } from './util
  * Yellow always means "you".
  */
 const TeamBar = ({ color, compact = false }: { color: Color; compact?: boolean }) => {
-  const { game, userId, clocks } = useContext(ChessGameContext);
+  const { game, userId, clocks, deadlines } = useContext(ChessGameContext);
+  const deadline = deadlines[color];
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!deadline) return;
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [deadline]);
   if (!game) return <div className={compact ? 'h-[60px]' : 'h-[68px]'} />;
 
   const over = game.status === 'over';
@@ -26,6 +34,11 @@ const TeamBar = ({ color, compact = false }: { color: Color; compact?: boolean }
   else if (onMove) status = mine && order[1]?.id === userId ? `${next?.name} is moving. You're next.` : `${next?.name} is moving.`;
   else if (game.status === 'waiting') status = color === 'w' ? `${next?.name} makes the first move.` : `${next?.name} plays Black's first move.`;
   else status = mine && next?.id === userId ? `You play ${colorName(color)}'s next move.` : `${next?.name} plays next.`;
+
+  if (deadline && !over) {
+    const left = formatClock(Math.max(0, deadline - now));
+    status = game.status === 'playing' ? `Away. Forfeits in ${left}.` : `Away. Game closes in ${left}.`;
+  }
 
   const clock = clocks ? formatClock(clocks[color]) : null;
   const low = clocks ? clocks[color] < 20_000 && onMove : false;
@@ -69,7 +82,7 @@ const TeamBar = ({ color, compact = false }: { color: Color; compact?: boolean }
           })}
         </ol>
         {status && (
-          <p className={`truncate text-[13px] ${myMove ? 'font-semibold text-accent-ink' : 'text-fg-muted'}`} aria-live="polite">
+          <p className={`truncate text-[13px] ${deadline && !over ? 'font-medium text-danger' : myMove ? 'font-semibold text-accent-ink' : 'text-fg-muted'}`} aria-live="polite">
             {status}
           </p>
         )}
