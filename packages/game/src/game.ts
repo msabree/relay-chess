@@ -84,6 +84,25 @@ export function join(state: GameState, player: { id: string; name: string }, col
   return ok(s);
 }
 
+/**
+ * Take over a seat whose player is away, before the first move. The new player
+ * gets the same spot in the relay order. Used when someone comes back from a
+ * different browser (a new identity) or a stranger fills an abandoned seat.
+ */
+export function takeSeat(state: GameState, player: { id: string; name: string }, seatOf: string): Outcome {
+  if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
+  if (colorOf(state, player.id)) return { ok: false, error: 'seat-taken' };
+  const s = clone(state);
+  for (const c of ['w', 'b'] as const) {
+    const i = s.teams[c].findIndex((p) => p.id === seatOf);
+    if (i < 0) continue;
+    if (s.teams[c][i]!.connected) return { ok: false, error: 'seat-taken' };
+    s.teams[c][i] = { id: player.id, name: player.name, connected: true };
+    return ok(s);
+  }
+  return { ok: false, error: 'not-seated' };
+}
+
 /** Give up a seat before the first move. During a game, use setConnected instead. */
 export function leave(state: GameState, playerId: string): Outcome {
   if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
@@ -217,12 +236,19 @@ export function resign(state: GameState, playerId: string): Outcome {
   return ok(end(clone(state), { winner: other(c), reason: 'resign', by: playerId }));
 }
 
-/** Abort is allowed until both sides have moved. No result is recorded. */
+/** A seated player can abort until both sides have moved, including before the first move. No result is recorded. */
 export function abort(state: GameState, playerId: string): Outcome {
-  if (state.status !== 'playing') return { ok: false, error: 'not-playing' };
+  if (state.status === 'over') return { ok: false, error: 'not-playing' };
   if (!colorOf(state, playerId)) return { ok: false, error: 'not-seated' };
   if (state.moves.length >= 2) return { ok: false, error: 'cannot-abort' };
   return ok(end(clone(state), { winner: null, reason: 'aborted', by: playerId }));
+}
+
+/** End a game that never really started (the server decides, e.g. a quick-match seat stayed empty). */
+export function cancel(state: GameState): Outcome {
+  if (state.status === 'over') return { ok: false, error: 'not-playing' };
+  if (state.moves.length >= 2) return { ok: false, error: 'cannot-abort' };
+  return ok(end(clone(state), { winner: null, reason: 'aborted' }));
 }
 
 /** Forfeit `color` because its whole team left. The server decides when. */

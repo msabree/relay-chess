@@ -36,6 +36,24 @@ describe('players', () => {
   });
 });
 
+describe('analysis', () => {
+  it('the first visitor saves it for everyone; after that only players can replace it', async () => {
+    const [player, visitor, other] = await Promise.all([t.guest(), t.guest(), t.guest()]);
+    const move = { move: 'e4', sanMove: 'e4', lanMove: 'e2e4', userId: player.user.id, username: 'P', fen: 'x' };
+    await t.store.saveGame({
+      roomId: 'room1', gameType: 'untimed', result: 'resign', reason: 'resign', winningColor: 'white', timeControl: null,
+      whiteTeam: [{ id: player.user.id, name: 'P' }], blackTeam: [], whiteTeamUserIds: [player.user.id], blackTeamUserIds: [],
+      userIds: [player.user.id], gameHistory: [move], timestamp: new Date(),
+    });
+    const post = (token: string, analysis: unknown[]) => t.api('/games/room1/analysis', { method: 'POST', token, json: { analysis } });
+    expect((await post(visitor.token, [])).status).toBe(400); // must cover every move
+    expect((await post(visitor.token, [{ a: 1 }])).status).toBe(200);
+    expect((await post(other.token, [{ a: 2 }])).status).toBe(403);
+    expect((await post(player.token, [{ a: 3 }])).status).toBe(200);
+    expect((await t.api('/games/room1')).body.game.analysis).toEqual([{ a: 3 }]);
+  });
+});
+
 describe('stats', () => {
   it('counts games played', async () => {
     expect((await t.api('/stats')).body).toEqual({ gamesPlayed: 0 });

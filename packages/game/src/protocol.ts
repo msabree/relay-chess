@@ -28,6 +28,12 @@ export interface RoomSnapshot {
   spectators: Spectator[];
   chat: ChatMessage[];
   rematchRoomId: string | null;
+  /**
+   * A side whose players have all left gets a deadline (server time, ms). If
+   * nobody on that side is back by then, the game ends: a forfeit mid-game, or
+   * the room closes if it's a quick match that never started.
+   */
+  deadlines: Partial<Record<Color, number>>;
   /** server clock when this snapshot was sent, to correct client clock drift */
   serverNow: number;
 }

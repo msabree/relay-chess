@@ -8,7 +8,7 @@ import { createMemoryStore } from '../src/store/memory';
 export type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 export const SECRET = 'test-secret-0123456789';
 
-export async function startServer(opts: { abandonMs?: number } = {}) {
+export async function startServer(opts: { abandonMs?: number; lobbyMs?: number } = {}) {
   const config = loadConfig({ AUTH_SECRET: SECRET, CORS_ORIGINS: 'http://localhost:3000' });
   const store = createMemoryStore();
   const server = createServer(config, store, { flushMs: 10, ...opts });

@@ -74,7 +74,8 @@ export type GameErrorCode =
   | 'teams-empty'
   | 'not-your-turn'
   | 'illegal-move'
-  | 'cannot-abort';
+  | 'cannot-abort'
+  | 'seat-taken';
 
 export type Outcome = { ok: true; state: GameState } | { ok: false; error: GameErrorCode };
 

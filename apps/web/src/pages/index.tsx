@@ -96,7 +96,6 @@ const LandingPage = () => {
               src={DEMO_VIDEO}
               title="A 2v2 Relay Chess game being played"
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
               className="block aspect-video w-full border-0 bg-ink-950"
             />
           </figure>

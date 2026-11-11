@@ -55,7 +55,7 @@ export const BOARD_COLOR_SCHEMES = [
   }
 ];
 
-export const DEMO_VIDEO_ID = 'ZqJTfKS_rWg';
+export const DEMO_VIDEO_ID = 'fpJZD0dczgw';
 // Muted autoplay loop; loop needs the id repeated in `playlist`.
 export const DEMO_VIDEO = `https://www.youtube-nocookie.com/embed/${DEMO_VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${DEMO_VIDEO_ID}&playsinline=1&rel=0`;
 export const SITE_URL = 'https://relaychess.com';

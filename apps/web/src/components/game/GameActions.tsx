@@ -8,7 +8,7 @@ const btn = 'h-11 flex-1 rounded-lg border border-line text-sm font-medium hover
 
 /** Result card after the game; draw/resign/abort during it. */
 const GameActions = () => {
-  const { game, room, teamColor, abortGame, resignGame, offerDraw, offerRematch, drawOfferedBy, roomId } = useContext(ChessGameContext);
+  const { game, room, teamColor, changeTeam, abortGame, resignGame, offerDraw, offerRematch, drawOfferedBy, roomId } = useContext(ChessGameContext);
   const [confirmResign, setConfirmResign] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -30,7 +30,11 @@ const GameActions = () => {
           <p className="text-sm text-fg-muted">{r.detail}</p>
         </div>
         <div className="flex gap-2">
-          {rematchId ? (
+          {game.result?.reason === 'aborted' && !room?.isPrivate ? (
+            <Link href="/" className="flex h-11 flex-1 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-accent-fg hover:bg-accent/90">
+              Find a new game
+            </Link>
+          ) : rematchId ? (
             <Link href={`/games/${rematchId}`} className="flex h-11 flex-1 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-accent-fg hover:bg-accent/90">
               Join rematch
             </Link>
@@ -46,11 +50,25 @@ const GameActions = () => {
           )}
         </div>
         {game.result?.reason !== 'aborted' && game.moves.length > 0 && (
-          <ShareResult game={game} roomId={roomId} me={teamColor ?? null} />
+          <ShareResult winner={game.result?.winner} reason={game.result?.reason ?? ''} plies={game.moves.length} roomId={roomId} me={teamColor ?? null} />
         )}
         <Link href="/" className="block text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
           Back to the lobby
         </Link>
+      </div>
+    );
+  }
+
+  // A quick match before the first move: anyone watching can fill a seat whose player left.
+  const openSeats = game.status === 'waiting' && !room?.isPrivate ? (['w', 'b'] as const).filter((c) => game.teams[c].some((p) => !p.connected)) : [];
+  if (!teamColor && openSeats.length > 0) {
+    return (
+      <div className="flex gap-2 p-3">
+        {openSeats.map((c) => (
+          <button key={c} type="button" onClick={() => changeTeam(c)} className="h-11 flex-1 rounded-lg bg-accent text-sm font-semibold text-accent-fg hover:bg-accent/90">
+            Take {c === 'w' ? 'White' : 'Black'} seat
+          </button>
+        ))}
       </div>
     );
   }
@@ -69,13 +87,13 @@ const GameActions = () => {
     );
   }
 
-  if (game.status === 'waiting') return null;
+  if (game.status === 'waiting' && room?.isPrivate) return null;
 
   if (game.moves.length < 2) {
     return (
       <div className="flex gap-2 p-3">
         <button type="button" onClick={abortGame} className={btn}>
-          Abort game
+          {game.status === 'waiting' ? 'Cancel game' : 'Abort game'}
         </button>
       </div>
     );
