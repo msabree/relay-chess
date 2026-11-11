@@ -23,9 +23,14 @@ export interface RoomSnapshot {
   isPrivate: boolean;
   /** friend room the players opened up: it shows on live games */
   watchable: boolean;
+  /** players turned off spectator chat while the game is on */
+  spectatorsMuted: boolean;
   createdAt: number;
   game: GameState;
+  /** a sample of who's watching (capped so big crowds stay cheap) */
   spectators: Spectator[];
+  /** everyone watching */
+  spectatorCount: number;
   chat: ChatMessage[];
   rematchRoomId: string | null;
   /**
@@ -36,6 +41,12 @@ export interface RoomSnapshot {
   deadlines: Partial<Record<Color, number>>;
   /** server clock when this snapshot was sent, to correct client clock drift */
   serverNow: number;
+}
+
+export interface Crowd {
+  roomId: string;
+  spectators: Spectator[];
+  spectatorCount: number;
 }
 
 export interface LiveGame {
@@ -78,14 +89,19 @@ export interface ClientToServerEvents {
   'room:seat': (p: RoomRef & { team: Color | 'spectator' }, ack: Cb) => void;
   'room:time': (p: RoomRef & { timeControl: string }, ack: Cb) => void;
   'room:watchable': (p: RoomRef & { watchable: boolean }, ack: Cb) => void;
+  'room:mute-spectators': (p: RoomRef & { muted: boolean }, ack: Cb) => void;
   'game:move': (p: RoomRef & { from: string; to: string; promotion?: string }, ack: Cb) => void;
   'game:resign': (p: RoomRef, ack: Cb) => void;
   'game:abort': (p: RoomRef, ack: Cb) => void;
   'game:draw': (p: RoomRef, ack: Cb) => void;
   'game:rematch': (p: RoomRef, ack: Cb<{ roomId: string }>) => void;
   'chat:send': (p: RoomRef & { text: string }, ack: Cb) => void;
+  /** stats plus the top few live games (home page) */
   'lobby:watch': (ack: Cb<{ stats: LobbyStats; games: LiveGame[] }>) => void;
   'lobby:unwatch': () => void;
+  /** every live game (the live games page) */
+  'live:watch': (ack: Cb<{ games: LiveGame[] }>) => void;
+  'live:unwatch': () => void;
   'queue:join': (p: { timeControl: string }, ack: Cb) => void;
   'queue:leave': (ack: Cb) => void;
   /** Start a 1v1 with the next player who also opts in, instead of waiting for a full 2v2. */
@@ -98,10 +114,15 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   'room:state': (room: RoomSnapshot) => void;
+  /** spectators came or went; sent instead of a full room:state, at most once a second */
+  'room:crowd': (p: Crowd) => void;
   'chat:message': (p: { roomId: string; message: ChatMessage }) => void;
   'room:rematch': (p: { roomId: string; rematchRoomId: string }) => void;
   'lobby:stats': (stats: LobbyStats) => void;
+  /** every live game, to 'live:watch' subscribers */
   'live:games': (games: LiveGame[]) => void;
+  /** the top few live games, to 'lobby:watch' subscribers */
+  'lobby:games': (games: LiveGame[]) => void;
   'party:state': (party: Party) => void;
   'queue:state': (p: { timeControl: string | null }) => void;
   'match:found': (p: { roomId: string }) => void;

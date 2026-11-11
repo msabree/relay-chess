@@ -4,7 +4,7 @@ import { request, useSocket } from '@/lib/socket';
 
 let watchers = 0;
 
-/** Online stats and live public games, pushed by the server. */
+/** Online stats and the top few live games, pushed by the server. */
 export function useLobby() {
   const { socket, connected } = useSocket();
   const [stats, setStats] = useState<LobbyStats | null>(null);
@@ -13,7 +13,7 @@ export function useLobby() {
   useEffect(() => {
     if (!socket || !connected) return;
     socket.on('lobby:stats', setStats);
-    socket.on('live:games', setGames);
+    socket.on('lobby:games', setGames);
     watchers++;
     request<{ stats: LobbyStats; games: LiveGame[] }>(socket, 'lobby:watch').then((res) => {
       if (res.ok) {
@@ -23,7 +23,7 @@ export function useLobby() {
     });
     return () => {
       socket.off('lobby:stats', setStats);
-      socket.off('live:games', setGames);
+      socket.off('lobby:games', setGames);
       if (--watchers === 0) socket.emit('lobby:unwatch');
     };
   }, [socket, connected]);

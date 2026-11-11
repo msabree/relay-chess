@@ -72,6 +72,8 @@ interface ChessGameContextProps {
   updateTimer: (timer: string) => void;
   // eslint-disable-next-line no-unused-vars
   setWatchable: (watchable: boolean) => void;
+  // eslint-disable-next-line no-unused-vars
+  setSpectatorsMuted: (muted: boolean) => void;
 }
 
 const noop = () => {};
@@ -125,6 +127,7 @@ export const ChessGameContext = createContext<ChessGameContextProps>({
   offerRematch: noop,
   updateTimer: noop,
   setWatchable: noop,
+  setSpectatorsMuted: noop,
 });
 
 interface ChessGameProviderProps {
@@ -323,6 +326,7 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
       }),
     updateTimer: (timer: string) => void room.setTimer(timer).then(fail('Could not change the timer')),
     setWatchable: (watchable: boolean) => void room.setWatchable(watchable).then(fail('Could not change who can watch')),
+    setSpectatorsMuted: (muted: boolean) => void room.setSpectatorsMuted(muted).then(fail('Could not change spectator chat')),
   };
 
   return <ChessGameContext.Provider value={value}>{children}</ChessGameContext.Provider>;

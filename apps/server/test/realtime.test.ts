@@ -136,6 +136,24 @@ describe('private rooms', () => {
     expect(message).toMatchObject({ userId: spec.user.id, name: spec.user.username, text: 'nice opening' });
   });
 
+  it('players can mute spectator chat during the game; it opens again after', async () => {
+    const ps = await Promise.all([1, 2].map(() => t.player()));
+    const room = await privateRoom(ps);
+    await play(ps, room.id, [['f2', 'f3']]);
+    const spec = await t.player();
+    await spec.socket.emitWithAck('room:join', { roomId: room.id });
+
+    expect(await spec.socket.emitWithAck('room:mute-spectators', { roomId: room.id, muted: true })).toEqual({ ok: false, error: 'not-seated' });
+    const muted = nextState(spec.socket, (r) => r.spectatorsMuted);
+    expect(await ps[0]!.socket.emitWithAck('room:mute-spectators', { roomId: room.id, muted: true })).toEqual({ ok: true });
+    await muted;
+    expect(await spec.socket.emitWithAck('chat:send', { roomId: room.id, text: 'play Qh4' })).toEqual({ ok: false, error: 'spectators-muted' });
+    expect(await ps[1]!.socket.emitWithAck('chat:send', { roomId: room.id, text: 'gg soon' })).toEqual({ ok: true });
+
+    await play(ps, room.id, [['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]); // mate: game over
+    expect(await spec.socket.emitWithAck('chat:send', { roomId: room.id, text: 'called it' })).toEqual({ ok: true });
+  });
+
   it('cannot act in a room you have not joined', async () => {
     const ps = await Promise.all([1, 2].map(() => t.player()));
     const room = await privateRoom(ps);
@@ -285,11 +303,12 @@ describe('matchmaking', () => {
     expect((await over).game.result).toEqual({ winner: null, reason: 'aborted' });
   });
 
-  it('lobby watchers see stats and live public games', async () => {
+  it('lobby watchers see stats; live watchers see every public game', async () => {
     const watcher = await t.player();
     const w = await watcher.socket.emitWithAck('lobby:watch');
     if (!w.ok) throw new Error(w.error);
     expect(w.stats.online).toBeGreaterThanOrEqual(1);
+    expect(await watcher.socket.emitWithAck('live:watch')).toEqual({ ok: true, games: [] });
     const live = next(watcher.socket, 'live:games', (games) => games.length === 1);
     const ps = await Promise.all([1, 2, 3, 4].map(() => t.player()));
     for (const p of ps) await p.socket.emitWithAck('queue:join', { timeControl: 'untimed' });
@@ -316,10 +335,13 @@ describe('matchmaking', () => {
     expect(before.stats.playing).toBe(1);
 
     expect(await watcher.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toMatchObject({ ok: false });
+    await watcher.socket.emitWithAck('live:watch');
     const listed = next(watcher.socket, 'live:games', (games) => games.length === 1);
+    const top = next(watcher.socket, 'lobby:games', (games) => games.length === 1);
     expect(await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true })).toEqual({ ok: true });
     const [games] = await listed;
     expect(games[0]).toMatchObject({ roomId: room.id, moveCount: 2 });
+    await top;
 
     // Someone arriving from live games mid-game only gets to watch.
     const stranger = await t.player();
@@ -332,5 +354,52 @@ describe('matchmaking', () => {
     const done = next(watcher.socket, 'lobby:stats', (st) => st.playing === 0);
     await play(ps, room.id, FOOLS_MATE.slice(2));
     await done;
+  });
+
+  it('home page gets only the top few games, most watched first', async () => {
+    const watcher = await t.player();
+    const rooms: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const ps = await Promise.all([1, 2].map(() => t.player()));
+      const room = await privateRoom(ps);
+      await ps[0]!.socket.emitWithAck('room:watchable', { roomId: room.id, watchable: true });
+      await play(ps, room.id, FOOLS_MATE.slice(0, 2));
+      rooms.push(room.id);
+    }
+    const fan = await t.player();
+    await fan.socket.emitWithAck('room:join', { roomId: rooms[4]! });
+    await sleep(30);
+    const w = await watcher.socket.emitWithAck('lobby:watch');
+    if (!w.ok) throw new Error(w.error);
+    expect(w.games).toHaveLength(5);
+    expect(w.games[0]).toMatchObject({ roomId: rooms[4], spectators: 1 });
+    const all = await watcher.socket.emitWithAck('live:watch');
+    if (!all.ok) throw new Error(all.error);
+    expect(all.games).toHaveLength(6);
+  });
+
+  it('spectators coming and going send a small batched crowd update, not the whole room', async () => {
+    const ps = await Promise.all([1, 2].map(() => t.player()));
+    const room = await privateRoom(ps);
+    await play(ps, room.id, FOOLS_MATE.slice(0, 2));
+    let states = 0;
+    ps[0]!.socket.on('room:state', () => states++);
+    const crowd = next(ps[0]!.socket, 'room:crowd', (c) => c.spectatorCount === 25);
+    const fans = await Promise.all(Array.from({ length: 25 }, () => t.player()));
+    await Promise.all(fans.map((f) => f.socket.emitWithAck('room:join', { roomId: room.id })));
+    const [c] = await crowd;
+    expect(c.spectators).toHaveLength(20);
+    expect(states).toBe(0);
+
+    const late = await t.player();
+    const joined = await late.socket.emitWithAck('room:join', { roomId: room.id });
+    if (!joined.ok) throw new Error(joined.error);
+    expect(joined.room.spectatorCount).toBe(26);
+    expect(joined.room.spectators).toHaveLength(20);
+
+    const gone = next(ps[0]!.socket, 'room:crowd', (c) => c.spectatorCount === 25);
+    late.socket.disconnect();
+    await gone;
+    expect(states).toBe(0);
   });
 });

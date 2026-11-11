@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Ack, Color, RoomSnapshot } from '@relay-chess/game';
+import type { Ack, Color, Crowd, RoomSnapshot } from '@relay-chess/game';
 import { request, toServerTimer, useSocket } from '@/lib/socket';
 
 /**
@@ -24,7 +24,13 @@ const useChessRoom = (roomId: string) => {
       if (p.roomId !== roomId) return;
       setRoom((prev) => (prev ? { ...prev, chat: [...prev.chat, p.message].slice(-200) } : prev));
     };
+    // Spectators coming and going arrive as a small separate update.
+    const onCrowd = (c: Crowd) => {
+      if (c.roomId !== roomId) return;
+      setRoom((prev) => (prev ? { ...prev, spectators: c.spectators, spectatorCount: c.spectatorCount } : prev));
+    };
     socket.on('room:state', onState);
+    socket.on('room:crowd', onCrowd);
     socket.on('chat:message', onChat);
     request<{ room: RoomSnapshot }>(socket, 'room:join', { roomId }).then((res) => {
       if (res.ok) {
@@ -34,6 +40,7 @@ const useChessRoom = (roomId: string) => {
     });
     return () => {
       socket.off('room:state', onState);
+      socket.off('room:crowd', onCrowd);
       socket.off('chat:message', onChat);
       socket.emit('room:leave', { roomId });
     };
@@ -60,6 +67,7 @@ const useChessRoom = (roomId: string) => {
     /** timer in the web's "5,3" format */
     setTimer: (timer: string): Promise<Ack> => request(socket, 'room:time', { roomId, timeControl: toServerTimer(timer) }),
     setWatchable: (watchable: boolean): Promise<Ack> => request(socket, 'room:watchable', { roomId, watchable }),
+    setSpectatorsMuted: (muted: boolean): Promise<Ack> => request(socket, 'room:mute-spectators', { roomId, muted }),
   };
 };
 

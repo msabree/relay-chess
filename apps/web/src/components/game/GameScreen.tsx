@@ -10,6 +10,7 @@ import RoomChat from './RoomChat';
 import RoomSetup from './RoomSetup';
 import GameActions from './GameActions';
 import { colorName } from './util';
+import Crowd, { MuteSpectators } from './Crowd';
 
 type Tab = 'setup' | 'moves' | 'chat';
 
@@ -109,9 +110,9 @@ const GameScreen = ({ lightColor, darkColor }: { lightColor?: string; darkColor?
             </div>
           ) : (
             <>
-              <div className="flex items-baseline justify-between px-4 pb-1 pt-3">
+              <div className="flex min-h-[40px] items-center justify-between px-4 pb-1 pt-3">
                 <h2 className="text-sm font-semibold">Moves</h2>
-                <span className="text-xs text-fg-subtle">initials show who played it</span>
+                {room?.spectators.length ? <Crowd /> : <span className="text-xs text-fg-subtle">initials show who played it</span>}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <MoveList />
@@ -128,9 +129,10 @@ const GameScreen = ({ lightColor, darkColor }: { lightColor?: string; darkColor?
             <GameActions />
           </div>
           <div className={`flex shrink-0 flex-col border-t border-line ${setup ? 'h-[220px]' : 'h-[300px]'}`}>
-            <div className="flex items-baseline justify-between px-4 pt-3">
+            <div className="flex min-h-[40px] items-center justify-between px-4 pt-3">
               <h2 className="text-sm font-semibold">Room chat</h2>
-              <span className="text-xs text-fg-subtle">everyone can read this</span>
+              <MuteSpectators />
+              {!(teamColor && room?.spectators.length) && <span className="text-xs text-fg-subtle">everyone can read this</span>}
             </div>
             <div className="min-h-0 flex-1">
               <RoomChat />
@@ -149,6 +151,11 @@ const GameScreen = ({ lightColor, darkColor }: { lightColor?: string; darkColor?
         <div className="px-3">
           <TeamBar color={bottom} compact />
         </div>
+        {!!room?.spectators.length && (
+          <div className="flex justify-end px-3">
+            <Crowd />
+          </div>
+        )}
         <div className="mx-auto w-full max-w-[640px]">
           {!setup && <MoveList horizontal />}
           {(reviewBanner || offerNote) && (
@@ -183,8 +190,13 @@ const GameScreen = ({ lightColor, darkColor }: { lightColor?: string; darkColor?
               </div>
             )}
             {tab === 'chat' && (
-              <div className="h-[360px]">
-                <RoomChat />
+              <div className="flex h-[360px] flex-col">
+                <div className="flex justify-end px-3 pt-2 empty:hidden">
+                  <MuteSpectators />
+                </div>
+                <div className="min-h-0 flex-1">
+                  <RoomChat />
+                </div>
               </div>
             )}
           </div>
