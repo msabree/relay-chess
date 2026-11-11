@@ -50,7 +50,7 @@ const GameActions = () => {
           )}
         </div>
         {game.result?.reason !== 'aborted' && game.moves.length > 0 && (
-          <ShareResult game={game} roomId={roomId} me={teamColor ?? null} />
+          <ShareResult winner={game.result?.winner} reason={game.result?.reason ?? ''} plies={game.moves.length} roomId={roomId} me={teamColor ?? null} />
         )}
         <Link href="/" className="block text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline">
           Back to the lobby

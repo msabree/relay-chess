@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Color, GameState } from '@relay-chess/game';
+import type { Color } from '@relay-chess/game';
 import { shareText } from '@/lib/result';
 
 const small =
@@ -9,12 +9,24 @@ const small =
  * Share a finished game. Phones get the native share sheet; desktop gets
  * copy link, X and WhatsApp. Links go to the permanent review page.
  */
-export default function ShareResult({ game, roomId, me }: { game: GameState; roomId: string; me: Color | null }) {
+export default function ShareResult({
+  winner,
+  reason,
+  plies,
+  roomId,
+  me,
+}: {
+  winner: Color | null | undefined;
+  reason: string;
+  plies: number;
+  roomId: string;
+  me: Color | null;
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const url = `${window.location.origin}/analysis/${roomId}`;
-  const text = shareText({ winner: game.result?.winner, reason: game.result?.reason ?? '', plies: game.moves.length, me });
+  const text = shareText({ winner, reason, plies, me });
 
   const share = async () => {
     if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {

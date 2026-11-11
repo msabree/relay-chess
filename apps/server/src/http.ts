@@ -106,7 +106,10 @@ export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
       if (!body.success) return res.status(400).json({ error: 'invalid-input' });
       const game = await store.getGame(String(req.params.roomId));
       if (!game) return res.status(404).json({ error: 'not-found' });
-      if (!game.userIds.includes(req.who!.id)) return res.status(403).json({ error: 'not-a-player' });
+      // Whoever opens the review first runs the engine and saves it for everyone.
+      // After that, only players can replace it.
+      if (game.analysis && !game.userIds.includes(req.who!.id)) return res.status(403).json({ error: 'not-a-player' });
+      if (body.data.analysis.length !== game.gameHistory.length) return res.status(400).json({ error: 'invalid-input' });
       await store.setAnalysis(game.roomId, body.data.analysis);
       res.json({ ok: true });
     }),
