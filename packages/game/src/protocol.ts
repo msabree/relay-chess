@@ -3,7 +3,7 @@
  * Every client event takes a payload and an ack callback; the server never
  * trusts anything but the payload's intent (who you are comes from your token).
  */
-import type { Color, GameState, TimeControl } from './types';
+import type { Color, GameState, PlayedMove, TimeControl } from './types';
 
 export interface ChatMessage {
   id: string;
@@ -41,6 +41,21 @@ export interface RoomSnapshot {
   deadlines: Partial<Record<Color, number>>;
   /** server clock when this snapshot was sent, to correct client clock drift */
   serverNow: number;
+  /** goes up by one with every change; patches build on it */
+  v: number;
+}
+
+/**
+ * What changed in a room, sent instead of the whole room. Apply it only on top
+ * of version v - 1; otherwise ask for the full room again (room:join).
+ * Chat isn't here (chat:message) and neither are spectators (room:crowd).
+ */
+export interface RoomPatch extends Omit<RoomSnapshot, 'game' | 'chat' | 'spectators' | 'spectatorCount'> {
+  game: Omit<GameState, 'moves'>;
+  /** total moves after this change */
+  moveCount: number;
+  /** the move just played, if this change added one */
+  move?: PlayedMove;
 }
 
 export interface Crowd {
@@ -114,6 +129,8 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   'room:state': (room: RoomSnapshot) => void;
+  /** a small update on top of the room the client already has */
+  'room:patch': (patch: RoomPatch) => void;
   /** spectators came or went; sent instead of a full room:state, at most once a second */
   'room:crowd': (p: Crowd) => void;
   'chat:message': (p: { roomId: string; message: ChatMessage }) => void;
@@ -150,4 +167,19 @@ export function parseTimeControl(key: string): TimeControl | null | undefined {
 export function timeControlKey(tc: TimeControl | null): string {
   if (!tc) return 'untimed';
   return `${Math.round(tc.initialMs / 60_000)}+${Math.round(tc.incrementMs / 1000)}`;
+}
+
+/**
+ * Apply a patch to the room a client already has. Returns the same room for a
+ * stale or duplicate patch, and null when there's a gap: then ask for the full
+ * room again.
+ */
+export function applyPatch(room: RoomSnapshot, p: RoomPatch): RoomSnapshot | null {
+  if (p.id !== room.id) return room;
+  if (p.v <= room.v) return room;
+  if (p.v !== room.v + 1) return null;
+  const moves = p.move ? [...room.game.moves, p.move] : room.game.moves.slice(0, p.moveCount);
+  if (moves.length !== p.moveCount) return null;
+  const { moveCount: _count, move: _move, game, ...rest } = p;
+  return { ...room, ...rest, game: { ...game, moves } };
 }

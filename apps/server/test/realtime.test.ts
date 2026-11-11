@@ -1,7 +1,7 @@
-import { nextMover, type RoomSnapshot } from '@relay-chess/game';
+import { applyPatch, nextMover, type RoomPatch, type RoomSnapshot } from '@relay-chess/game';
 import { io as connect } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { next, nextState, sleep, startServer, type Player } from './helpers';
+import { gapsOf, next, nextState, roomOf, sleep, startServer, type Player } from './helpers';
 
 let t: Awaited<ReturnType<typeof startServer>>;
 beforeEach(async () => (t = await startServer({ abandonMs: 100, lobbyMs: 150 })));
@@ -401,5 +401,68 @@ describe('matchmaking', () => {
     late.socket.disconnect();
     await gone;
     expect(states).toBe(0);
+  });
+});
+
+describe('room patches', () => {
+  // A longer line so the room has real history: 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 Bb4+
+  const ITALIAN: [string, string][] = [
+    ['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6'], ['f1', 'c4'], ['f8', 'c5'],
+    ['c2', 'c3'], ['g8', 'f6'], ['d2', 'd4'], ['e5', 'd4'], ['c3', 'd4'], ['c5', 'b4'],
+  ];
+
+  it('moves go out as small patches that rebuild exactly the room a fresh join gets', async () => {
+    const ps = await Promise.all([1, 2].map(() => t.player()));
+    const room = await privateRoom(ps);
+    await play(ps, room.id, ITALIAN.slice(0, 1)); // joiners spectate once the game is on
+    const spec = await t.player();
+    await spec.socket.emitWithAck('room:join', { roomId: room.id });
+    for (let i = 0; i < 5; i++) await ps[0]!.socket.emitWithAck('chat:send', { roomId: room.id, text: `message number ${i} with some words` });
+
+    const sizes: number[] = [];
+    let fulls = 0;
+    spec.socket.on('room:patch', (p: RoomPatch) => sizes.push(JSON.stringify(p).length));
+    spec.socket.on('room:state', () => fulls++);
+    await play(ps, room.id, ITALIAN.slice(1));
+    await sleep(20);
+
+    // Patches stay the same size however long the game gets, and the whole room never goes out.
+    expect(fulls).toBe(0);
+    expect(sizes.length).toBeGreaterThanOrEqual(ITALIAN.length - 1);
+    expect(Math.max(...sizes)).toBeLessThan(2000);
+    expect(Math.abs(sizes.at(-1)! - sizes[0]!)).toBeLessThan(300);
+
+    // What the spectator built from patches equals a fresh join (minus the send time).
+    const fresh = (await t.player()).socket;
+    const joined = await fresh.emitWithAck('room:join', { roomId: room.id });
+    if (!joined.ok) throw new Error(joined.error);
+    const built = roomOf(spec.socket, room.id)!;
+    const strip = (r: RoomSnapshot) => ({ ...r, serverNow: 0, spectators: [], spectatorCount: 0 });
+    expect(strip(built)).toEqual(strip(joined.room));
+    // The full room carries every move (and chat); a patch carries one move.
+    const perMove = JSON.stringify(joined.room.game.moves[0]).length;
+    expect(JSON.stringify(joined.room).length).toBeGreaterThan(Math.max(...sizes) + perMove * (ITALIAN.length - 2));
+    expect(gapsOf(spec.socket)).toBe(0);
+  });
+
+  it('a missed patch is caught, and an old or repeated one is ignored', async () => {
+    const ps = await Promise.all([1, 2].map(() => t.player()));
+    const room = await privateRoom(ps);
+    const joined = await ps[0]!.socket.emitWithAck('room:join', { roomId: room.id });
+    if (!joined.ok) throw new Error(joined.error);
+    const base = joined.room;
+    const patches: RoomPatch[] = [];
+    ps[0]!.socket.on('room:patch', (p: RoomPatch) => patches.push(p));
+    await play(ps, room.id, ITALIAN.slice(0, 3));
+    await sleep(20);
+    expect(patches.length).toBeGreaterThanOrEqual(3);
+
+    const one = applyPatch(base, patches[0]!)!;
+    expect(one.game.moves).toHaveLength(1);
+    expect(applyPatch(one, patches[0]!)).toBe(one); // repeated: no change
+    expect(applyPatch(base, patches[1]!)).toBeNull(); // skipped one: resync
+    let r: RoomSnapshot = base;
+    for (const p of patches) r = applyPatch(r, p)!;
+    expect(r.game.moves.map((m) => m.san)).toEqual(['e4', 'e5', 'Nf3']);
   });
 });

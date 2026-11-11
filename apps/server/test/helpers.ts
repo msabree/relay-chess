@@ -1,11 +1,54 @@
 import type { AddressInfo } from 'node:net';
-import type { ClientToServerEvents, RoomSnapshot, ServerToClientEvents } from '@relay-chess/game';
+import { applyPatch, type ClientToServerEvents, type RoomSnapshot, type ServerToClientEvents } from '@relay-chess/game';
 import { io as connect, type Socket } from 'socket.io-client';
 import { createServer } from '../src/app';
 import { loadConfig } from '../src/config';
 import { createMemoryStore } from '../src/store/memory';
 
 export type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+/**
+ * Each test client keeps its rooms the way the web app does: the full room
+ * from room:join (or room:state), then room:patch applied on top. `gaps`
+ * counts patches that didn't follow the version the client had.
+ */
+interface Tracker {
+  rooms: Map<string, RoomSnapshot>;
+  listeners: Set<(r: RoomSnapshot) => void>;
+  gaps: number;
+}
+const trackers = new WeakMap<Client, Tracker>();
+
+function track(s: Client) {
+  const t: Tracker = { rooms: new Map(), listeners: new Set(), gaps: 0 };
+  trackers.set(s, t);
+  const set = (r: RoomSnapshot) => {
+    t.rooms.set(r.id, r);
+    for (const l of [...t.listeners]) l(r);
+  };
+  s.on('room:state', set);
+  s.on('room:patch', (p) => {
+    const cur = t.rooms.get(p.id);
+    if (!cur) return;
+    const next = applyPatch(cur, p);
+    if (next === null) t.gaps++;
+    else if (next !== cur) set(next);
+  });
+  s.on('chat:message', ({ roomId, message }) => {
+    const cur = t.rooms.get(roomId);
+    if (cur) set({ ...cur, chat: [...cur.chat, message].slice(-200) });
+  });
+  const emitWithAck = s.emitWithAck.bind(s) as (...a: unknown[]) => Promise<any>;
+  (s as unknown as { emitWithAck: unknown }).emitWithAck = async (event: string, ...args: unknown[]) => {
+    const res = await emitWithAck(event, ...args);
+    if (event === 'room:join' && res?.ok) t.rooms.set(res.room.id, res.room);
+    return res;
+  };
+}
+
+/** The room as this client sees it now, built from joins and patches. */
+export const roomOf = (s: Client, roomId: string) => trackers.get(s)!.rooms.get(roomId);
+export const gapsOf = (s: Client) => trackers.get(s)!.gaps;
 export const SECRET = 'test-secret-0123456789';
 
 export async function startServer(opts: { abandonMs?: number; lobbyMs?: number } = {}) {
@@ -28,6 +71,7 @@ export async function startServer(opts: { abandonMs?: number; lobbyMs?: number }
   const client = async (token: string): Promise<Client> => {
     const s: Client = connect(url, { auth: { token }, transports: ['websocket'], forceNew: true });
     sockets.push(s);
+    track(s);
     await new Promise<void>((resolve, reject) => {
       s.once('connect', () => resolve());
       s.once('connect_error', reject);
@@ -76,7 +120,18 @@ export function next<E extends keyof ServerToClientEvents>(
   });
 }
 
-export const nextState = (s: Client, match: (r: RoomSnapshot) => boolean = () => true, ms?: number) =>
-  next(s, 'room:state', match, ms).then(([r]) => r);
+/** The next room update this client sees (full or patched) that matches. */
+export const nextState = (s: Client, match: (r: RoomSnapshot) => boolean = () => true, ms = 2000) =>
+  new Promise<RoomSnapshot>((resolve, reject) => {
+    const t = trackers.get(s)!;
+    const timer = setTimeout(() => (t.listeners.delete(l), reject(new Error('timeout waiting for room update'))), ms);
+    const l = (r: RoomSnapshot) => {
+      if (!match(r)) return;
+      clearTimeout(timer);
+      t.listeners.delete(l);
+      resolve(r);
+    };
+    t.listeners.add(l);
+  });
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

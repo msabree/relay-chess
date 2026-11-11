@@ -25,6 +25,7 @@ import {
   type LiveGame,
   type MoveInput,
   type Outcome,
+  type RoomPatch,
   type RoomSnapshot,
   type Spectator,
   type TimeControl,
@@ -66,6 +67,10 @@ export interface Room {
   timersFor?: GameState['status'];
   /** resolves once the result is stored (tests await it) */
   saved?: Promise<void>;
+  /** version: bumped on every change, so clients can apply small patches in order */
+  v: number;
+  /** moves clients had at the last broadcast, to know if this change added one */
+  sentMoves: number;
 }
 
 export type RoomResult<T = Room> = { ok: true; value: T } | { ok: false; error: string };
@@ -132,6 +137,8 @@ export class RoomService {
       lastActivity: this.now(),
       abandonTimers: {},
       deadlines: {},
+      v: 0,
+      sentMoves: 0,
     };
     // Matchmade players haven't opened the room yet.
     for (const p of [...room.game.teams.w, ...room.game.teams.b]) room.game = setConnected(room.game, p.id, false);
@@ -154,6 +161,33 @@ export class RoomService {
       rematchRoomId: room.rematchRoomId,
       deadlines: room.deadlines,
       serverNow: this.now(),
+      v: room.v,
+    };
+  }
+
+  /**
+   * Just what changed since the last broadcast: the new move (if any) and the
+   * light room state, without move history, chat or spectators. Null when a
+   * patch can't express the change, so the caller sends the whole room instead.
+   */
+  patch(room: Room): RoomPatch | null {
+    const { moves, ...game } = room.game;
+    const added = moves.length - room.sentMoves;
+    room.sentMoves = moves.length;
+    if (added > 1) return null;
+    return {
+      id: room.id,
+      isPrivate: room.isPrivate,
+      watchable: room.watchable,
+      spectatorsMuted: room.spectatorsMuted,
+      createdAt: room.createdAt,
+      game,
+      moveCount: moves.length,
+      ...(added === 1 ? { move: moves[moves.length - 1] } : {}),
+      rematchRoomId: room.rematchRoomId,
+      deadlines: room.deadlines,
+      serverNow: this.now(),
+      v: room.v,
     };
   }
 
@@ -406,6 +440,7 @@ export class RoomService {
     room.lastActivity = this.now();
     this.schedule(room);
     if (room.game.status === 'over' && !room.saved) room.saved = this.finish(room);
+    room.v++;
     this.deps.onState(room);
     if (this.listed(room)) this.deps.onLiveChanged();
   }

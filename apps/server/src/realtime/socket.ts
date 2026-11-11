@@ -57,7 +57,12 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
     store,
     abandonMs: deps.abandonMs,
     lobbyMs: deps.lobbyMs,
-    onState: (r) => io.to(`room:${r.id}`).emit('room:state', rooms.snapshot(r)),
+    // Small patches by default; the whole room only when a patch can't say it.
+    onState: (r) => {
+      const patch = rooms.patch(r);
+      if (patch) io.to(`room:${r.id}`).emit('room:patch', patch);
+      else io.to(`room:${r.id}`).emit('room:state', rooms.snapshot(r));
+    },
     onChat: (r, message) => io.to(`room:${r.id}`).emit('chat:message', { roomId: r.id, message }),
     onCrowd: (r) => void crowds.add(r.id),
     onLiveChanged: () => (liveDirty = true),
