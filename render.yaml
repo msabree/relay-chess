@@ -1,6 +1,6 @@
 # Render Blueprint: the Relay Chess server (HTTP API + socket.io), staging and production.
-#   main -> relay-chess-server-stage (staging-api.relaychess.com)
-#   prod -> relay-chess-server       (api.relaychess.com)
+#   main -> relay-chess-server-stage (relay-chess-server-stage.onrender.com)
+#   prod -> relay-chess-server       (relay-chess-server.onrender.com)
 # The web app deploys on Vercel (see DEPLOY.md).
 # Both services deploy after a push to their branch, once GitHub checks (CI) pass.
 # Games live in memory, so each runs exactly one instance.
