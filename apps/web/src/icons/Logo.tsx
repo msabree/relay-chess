@@ -20,7 +20,7 @@ export const LogoMark = ({ size = 24, className = '', ...props }: SVGProps<SVGSV
 
 /** Full "RELAY CHESS" wordmark. */
 const Logo = ({ className = '', height = 22 }: { className?: string; height?: number; size?: number }) => (
-  <svg viewBox="0 0 380 45" height={height} width={(height * 380) / 45} role="img" aria-label="Relay Chess" className={`text-fg ${className}`}>
+  <svg viewBox="0 0 384 45" height={height} width={(height * 384) / 45} role="img" aria-label="Relay Chess" className={`text-fg ${className}`}>
     {ACCENT_PATHS.map((d, i) => (
       <path key={i} d={d} className={ACCENT} />
     ))}

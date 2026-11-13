@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Chessboard } from 'react-chessboard';
 import { ErrorBoundary } from 'react-error-boundary';
 import NavigationBar from '@/components/NavigationBar';
@@ -28,11 +28,15 @@ function Fallback() {
   );
 }
 
+/** `?embed=1`: inside the mobile app's WebView. The app brings its own header and share button. */
+const useEmbed = () => useSearchParams()?.get('embed') === '1';
+
 /** Game review: replay the game, see who carried and who blundered. */
 export default function GameReview() {
+  const embed = useEmbed();
   return (
     <>
-      <NavigationBar compact />
+      {!embed && <NavigationBar compact />}
       <ErrorBoundary fallback={<Fallback />} onError={(e) => console.error('review page crashed', e)}>
         <Review />
       </ErrorBoundary>
@@ -47,6 +51,7 @@ function Review() {
   const me = useUser().data?._id;
   const desktop = useMediaQuery('(min-width: 1024px)');
   const scheme = useBoardColor();
+  const embed = useEmbed();
 
   // Analysis: use the saved one, or run Stockfish here and save it for everyone else.
   const [fresh, setFresh] = useState<AnalyzedMove[] | null>(null);
@@ -212,7 +217,7 @@ function Review() {
     </div>
   );
 
-  const share = (
+  const share = embed ? null : (
     <ShareResult winner={winner} reason={game.reason ?? ''} plies={total} roomId={game.roomId} me={mySide === 'black' ? 'b' : me && game.whiteTeamUserIds.includes(me) ? 'w' : null} />
   );
 

@@ -8,7 +8,7 @@ import LiveGamesStrip from '@/components/LiveGamesStrip';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
-import { DEMO_VIDEO, SITE_URL } from '@/constants';
+import { DEMO_VIDEO, OG_IMAGE, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
 import useGamesPlayed from '@/hooks/useGamesPlayed';
 import { REPO_URL } from '@/lib/github';
@@ -47,6 +47,12 @@ const LandingPage = () => {
         <meta property="og:url" content={SITE_URL} />
         <meta property="og:title" content="Relay Chess: 2v2 chess with your friends" />
         <meta property="og:description" content="Two teams, one board. Teammates take turns making moves." />
+        <meta property="og:site_name" content="Relay Chess" />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content={OG_IMAGE} />
         <link rel="canonical" href={SITE_URL} />
       </Head>
 
