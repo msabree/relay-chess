@@ -25,6 +25,7 @@ import {
   type LiveGame,
   type MoveInput,
   type Outcome,
+  type RoomPatch,
   type RoomSnapshot,
   type Spectator,
   type TimeControl,
@@ -35,6 +36,10 @@ import { outcomes, toGameRecord } from '../records';
 import type { Store } from '../store/types';
 
 const MAX_CHAT = 200;
+/** spectator names sent with each room update; the rest is just a count */
+const SPECTATOR_SAMPLE = 20;
+/** live games shown on the home page */
+const TOP_GAMES = 5;
 const MAX_PLAYERS = 8;
 
 export interface Room {
@@ -42,6 +47,8 @@ export interface Room {
   isPrivate: boolean;
   /** private room opened up to anyone: listed on live games */
   watchable: boolean;
+  /** players turned off spectator chat (applies while the game is on) */
+  spectatorsMuted: boolean;
   createdAt: number;
   game: GameState;
   spectators: Map<string, Spectator>;
@@ -60,6 +67,10 @@ export interface Room {
   timersFor?: GameState['status'];
   /** resolves once the result is stored (tests await it) */
   saved?: Promise<void>;
+  /** version: bumped on every change, so clients can apply small patches in order */
+  v: number;
+  /** moves clients had at the last broadcast, to know if this change added one */
+  sentMoves: number;
 }
 
 export type RoomResult<T = Room> = { ok: true; value: T } | { ok: false; error: string };
@@ -70,6 +81,8 @@ export interface RoomServiceDeps {
   /** a room changed: broadcast it */
   onState: (room: Room) => void;
   onChat: (room: Room, msg: ChatMessage) => void;
+  /** only the spectators changed (cheap; batched by the caller) */
+  onCrowd: (room: Room) => void;
   /** public room list changed */
   onLiveChanged: () => void;
   now?: () => number;
@@ -107,12 +120,13 @@ export class RoomService {
     return this.rooms.size;
   }
 
-  create(opts: { isPrivate: boolean; watchable?: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
+  create(opts: { isPrivate: boolean; watchable?: boolean; spectatorsMuted?: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
     const id = randomBytes(8).toString('base64url');
     const room: Room = {
       id,
       isPrivate: opts.isPrivate,
       watchable: opts.watchable ?? false,
+      spectatorsMuted: opts.spectatorsMuted ?? false,
       createdAt: this.now(),
       game: createGame({ id, timeControl: opts.timeControl, teams: opts.teams }),
       spectators: new Map(),
@@ -123,6 +137,8 @@ export class RoomService {
       lastActivity: this.now(),
       abandonTimers: {},
       deadlines: {},
+      v: 0,
+      sentMoves: 0,
     };
     // Matchmade players haven't opened the room yet.
     for (const p of [...room.game.teams.w, ...room.game.teams.b]) room.game = setConnected(room.game, p.id, false);
@@ -136,13 +152,42 @@ export class RoomService {
       id: room.id,
       isPrivate: room.isPrivate,
       watchable: room.watchable,
+      spectatorsMuted: room.spectatorsMuted,
       createdAt: room.createdAt,
       game: room.game,
-      spectators: [...room.spectators.values()],
+      spectators: [...room.spectators.values()].slice(0, SPECTATOR_SAMPLE),
+      spectatorCount: room.spectators.size,
       chat: room.chat,
       rematchRoomId: room.rematchRoomId,
       deadlines: room.deadlines,
       serverNow: this.now(),
+      v: room.v,
+    };
+  }
+
+  /**
+   * Just what changed since the last broadcast: the new move (if any) and the
+   * light room state, without move history, chat or spectators. Null when a
+   * patch can't express the change, so the caller sends the whole room instead.
+   */
+  patch(room: Room): RoomPatch | null {
+    const { moves, ...game } = room.game;
+    const added = moves.length - room.sentMoves;
+    room.sentMoves = moves.length;
+    if (added > 1) return null;
+    return {
+      id: room.id,
+      isPrivate: room.isPrivate,
+      watchable: room.watchable,
+      spectatorsMuted: room.spectatorsMuted,
+      createdAt: room.createdAt,
+      game,
+      moveCount: moves.length,
+      ...(added === 1 ? { move: moves[moves.length - 1] } : {}),
+      rematchRoomId: room.rematchRoomId,
+      deadlines: room.deadlines,
+      serverNow: this.now(),
+      v: room.v,
     };
   }
 
@@ -156,6 +201,7 @@ export class RoomService {
     if (who.guest) room.guests.add(who.id);
 
     const g = room.game;
+    let watching = false;
     if (colorOf(g, who.id)) {
       room.game = setConnected(g, who.id, true);
     } else if (room.isPrivate && g.status === 'waiting' && g.teams.w.length + g.teams.b.length < MAX_PLAYERS) {
@@ -164,11 +210,14 @@ export class RoomService {
       const team: Color = w < b ? 'w' : b < w ? 'b' : Math.random() < 0.5 ? 'w' : 'b';
       const r = joinTeam(g, { id: who.id, name: who.name }, team);
       if (r.ok) room.game = r.state;
-      else room.spectators.set(who.id, { id: who.id, name: who.name });
+      else (room.spectators.set(who.id, { id: who.id, name: who.name }), (watching = true));
     } else {
       room.spectators.set(who.id, { id: who.id, name: who.name });
+      watching = true;
     }
-    this.changed(room);
+    // A spectator arriving only changes the crowd: don't resend the whole room to everyone.
+    if (watching) this.crowdChanged(room);
+    else this.changed(room);
     return { ok: true, value: room };
   }
 
@@ -182,9 +231,12 @@ export class RoomService {
       return;
     }
     room.presence.delete(who.id);
-    room.spectators.delete(who.id);
-    if (colorOf(room.game, who.id)) room.game = setConnected(room.game, who.id, false);
-    this.changed(room);
+    if (colorOf(room.game, who.id)) {
+      room.game = setConnected(room.game, who.id, false);
+      this.changed(room);
+    } else if (room.spectators.delete(who.id)) {
+      this.crowdChanged(room);
+    }
   }
 
   // ---- lobby actions (before the first move) ----
@@ -232,6 +284,18 @@ export class RoomService {
     return { ok: true, value: room };
   }
 
+  /** Any seated player can stop spectators from chatting during the game (or let them back in). */
+  setSpectatorsMuted(roomId: string, who: Identity, muted: boolean): RoomResult {
+    const room = this.rooms.get(roomId);
+    if (!room) return fail('room-not-found');
+    if (!colorOf(room.game, who.id)) return fail('not-seated');
+    if (room.spectatorsMuted !== muted) {
+      room.spectatorsMuted = muted;
+      this.changed(room);
+    }
+    return { ok: true, value: room };
+  }
+
   // ---- game actions ----
 
   move(roomId: string, who: Identity, input: MoveInput): RoomResult {
@@ -261,6 +325,7 @@ export class RoomService {
     const next = this.create({
       isPrivate: room.isPrivate,
       watchable: room.watchable,
+      spectatorsMuted: room.spectatorsMuted,
       timeControl: room.game.timeControl,
       teams: { w: room.game.teams.b.map(asIdentity), b: room.game.teams.w.map(asIdentity) },
     });
@@ -273,6 +338,8 @@ export class RoomService {
     const room = this.rooms.get(roomId);
     if (!room) return fail('room-not-found');
     if (!room.presence.has(who.id)) return fail('not-in-room');
+    // Muted spectators can't hint mid-game; they can talk again once it's over.
+    if (room.spectatorsMuted && room.game.status === 'playing' && !colorOf(room.game, who.id)) return fail('spectators-muted');
     const clean = text.trim().slice(0, 500);
     if (!clean) return fail('empty-message');
     const now = this.now();
@@ -304,6 +371,18 @@ export class RoomService {
         spectators: r.spectators.size,
         createdAt: r.createdAt,
       }));
+  }
+
+  /** Home page: the most watched games, then the longest running. */
+  topGames(): LiveGame[] {
+    return this.liveGames()
+      .filter((g) => g.moveCount >= 2)
+      .sort((a, b) => b.spectators - a.spectators || b.moveCount - a.moveCount)
+      .slice(0, TOP_GAMES);
+  }
+
+  crowd(room: Room) {
+    return { roomId: room.id, spectators: [...room.spectators.values()].slice(0, SPECTATOR_SAMPLE), spectatorCount: room.spectators.size };
   }
 
   /** Games in progress (first move made), private ones included. */
@@ -351,10 +430,17 @@ export class RoomService {
   }
 
   /** Call after every change: reschedule timers, persist results, broadcast. */
+  private crowdChanged(room: Room) {
+    room.lastActivity = this.now();
+    this.deps.onCrowd(room);
+    if (this.listed(room)) this.deps.onLiveChanged();
+  }
+
   private changed(room: Room) {
     room.lastActivity = this.now();
     this.schedule(room);
     if (room.game.status === 'over' && !room.saved) room.saved = this.finish(room);
+    room.v++;
     this.deps.onState(room);
     if (this.listed(room)) this.deps.onLiveChanged();
   }

@@ -36,6 +36,7 @@ const S = {
   seat: z.object({ roomId, team: z.enum(['w', 'b', 'spectator']) }),
   time: z.object({ roomId, timeControl }),
   watchable: z.object({ roomId, watchable: z.boolean() }),
+  muteSpectators: z.object({ roomId, muted: z.boolean() }),
   move: z.object({ roomId, from: square, to: square, promotion: z.enum(['q', 'r', 'b', 'n']).optional() }),
   chat: z.object({ roomId, text: z.string().min(1).max(1000) }),
   queue: z.object({ timeControl: queueTimeControl }),
@@ -43,19 +44,27 @@ const S = {
   partyQueue: z.object({ partyId: z.string().regex(PARTY_ID), timeControl: queueTimeControl }),
 };
 
-export function attachRealtime(io: IO, deps: { config: Config; store: Store; abandonMs?: number; lobbyMs?: number; flushMs?: number }) {
+export function attachRealtime(io: IO, deps: { config: Config; store: Store; abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number }) {
   const { config, store } = deps;
   const online = new Map<string, number>();
   let statsDirty = false;
   let liveDirty = false;
   let lastStats = '';
+  /** rooms whose spectators changed since the last flush */
+  const crowds = new Set<string>();
 
   const rooms = new RoomService({
     store,
     abandonMs: deps.abandonMs,
     lobbyMs: deps.lobbyMs,
-    onState: (r) => io.to(`room:${r.id}`).emit('room:state', rooms.snapshot(r)),
+    // Small patches by default; the whole room only when a patch can't say it.
+    onState: (r) => {
+      const patch = rooms.patch(r);
+      if (patch) io.to(`room:${r.id}`).emit('room:patch', patch);
+      else io.to(`room:${r.id}`).emit('room:state', rooms.snapshot(r));
+    },
     onChat: (r, message) => io.to(`room:${r.id}`).emit('chat:message', { roomId: r.id, message }),
+    onCrowd: (r) => void crowds.add(r.id),
     onLiveChanged: () => (liveDirty = true),
   });
   const parties = new Parties();
@@ -88,9 +97,22 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
     const key = JSON.stringify(s);
     if (statsDirty || key !== lastStats) io.to('lobby').emit('lobby:stats', s);
     lastStats = key;
-    if (liveDirty) io.to('lobby').emit('live:games', rooms.liveGames());
-    statsDirty = liveDirty = false;
+    statsDirty = false;
+    // Crowd changes go out batched and small, so a big audience arriving isn't a flood.
+    for (const id of crowds) {
+      const room = rooms.get(id);
+      if (room) io.to(`room:${id}`).emit('room:crowd', rooms.crowd(room));
+    }
+    crowds.clear();
   }, deps.flushMs ?? 1000);
+
+  // Live game lists change on every move, so they go out less often.
+  const liveFlush = setInterval(() => {
+    if (!liveDirty) return;
+    liveDirty = false;
+    io.to('live').emit('live:games', rooms.liveGames());
+    io.to('lobby').emit('lobby:games', rooms.topGames());
+  }, deps.liveFlushMs ?? 3000);
 
   const housekeeping = setInterval(() => {
     rooms.sweep();
@@ -170,6 +192,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
     on('room:seat', S.seat, guard((p) => done(rooms.seat(p.roomId, who, p.team))));
     on('room:time', S.time, guard((p) => done(rooms.setTime(p.roomId, who, parseTimeControl(p.timeControl) ?? null))));
     on('room:watchable', S.watchable, guard((p) => done(rooms.setWatchable(p.roomId, who, p.watchable))));
+    on('room:mute-spectators', S.muteSpectators, guard((p) => done(rooms.setSpectatorsMuted(p.roomId, who, p.muted))));
     on('game:move', S.move, guard((p) => done(rooms.move(p.roomId, who, p))));
     on('game:resign', S.roomRef, guard((p) => done(rooms.resign(p.roomId, who))));
     on('game:abort', S.roomRef, guard((p) => done(rooms.abort(p.roomId, who))));
@@ -187,9 +210,14 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
 
     on('lobby:watch', null, () => {
       socket.join('lobby');
-      return { ok: true, stats: stats(), games: rooms.liveGames() };
+      return { ok: true, stats: stats(), games: rooms.topGames() };
     });
     on('lobby:unwatch', null, () => void socket.leave('lobby'));
+    on('live:watch', null, () => {
+      socket.join('live');
+      return { ok: true, games: rooms.liveGames() };
+    });
+    on('live:unwatch', null, () => void socket.leave('live'));
 
     // ---- matchmaking ----
 
@@ -278,6 +306,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
     parties,
     close() {
       clearInterval(flush);
+      clearInterval(liveFlush);
       clearInterval(housekeeping);
       rooms.shutdown();
     },

@@ -4,8 +4,8 @@ Two environments, one branch each:
 
 | Branch | Environment | Web (Vercel) | Server (Render) | Database |
 |---|---|---|---|---|
-| `main` | staging | staging.relaychess.com | staging-api.relaychess.com | your staging DB |
-| `prod` | production | relaychess.com | api.relaychess.com | your production DB |
+| `main` | staging | staging.relaychess.com | relay-chess-server-stage.onrender.com | your staging DB |
+| `prod` | production | relaychess.com | relay-chess-server.onrender.com | your production DB |
 
 **Flow:** feature branch → PR into `main` (deploys to staging) → check staging → PR `main` → `prod` (deploys to production).
 
@@ -30,8 +30,7 @@ git branch prod && git push -u origin prod
    - `MONGODB_URL`: Atlas connection string. Same cluster is fine.
    - `DATABASE_NAME`: any name; use a different one for staging and production. The server creates its collections (`recent_games`, `scores`) on first start and never touches anything else in the database.
    - `LEGACY_GAMES_PLAYED` (production only, set in `render.yaml`): 6177, the games in the old account-era `games` collection. It is added to the live count shown on the homepage.
-3. Custom domains: `staging-api.relaychess.com` on staging, `api.relaychess.com` on production.
-4. Check `/health` on both returns `{"ok":true,"store":"mongo"}`.
+3. Check `/health` on both returns `{"ok":true,"store":"mongo"}`.
 
 ### 3. Vercel (web)
 1. Settings → Git: **Production Branch `prod`**.
@@ -41,7 +40,7 @@ git branch prod && git push -u origin prod
 
    | Variable | Production | Staging (branch `main`) |
    |---|---|---|
-   | `NEXT_PUBLIC_SERVER_URL` | `https://api.relaychess.com` | `https://staging-api.relaychess.com` |
+   | `NEXT_PUBLIC_SERVER_URL` | `https://relay-chess-server.onrender.com` | `https://relay-chess-server-stage.onrender.com` |
    | `NEXT_PUBLIC_GA_ID` | optional | leave empty |
 
    Delete anything else left over from the account era (`NEXTAUTH_*`, `GOOGLE_*`, `APPLE_*`, `AUTH_SECRET`, `NEXT_PUBLIC_ENABLE_SIGN_IN`, `NEXT_PUBLIC_CHESS_SERVER_*`, `CHESS_SERVER_API`, `NEXT_PUBLIC_USE_TEST_USERS`).

@@ -3,7 +3,7 @@
  * Every client event takes a payload and an ack callback; the server never
  * trusts anything but the payload's intent (who you are comes from your token).
  */
-import type { Color, GameState, TimeControl } from './types';
+import type { Color, GameState, PlayedMove, TimeControl } from './types';
 
 export interface ChatMessage {
   id: string;
@@ -23,9 +23,14 @@ export interface RoomSnapshot {
   isPrivate: boolean;
   /** friend room the players opened up: it shows on live games */
   watchable: boolean;
+  /** players turned off spectator chat while the game is on */
+  spectatorsMuted: boolean;
   createdAt: number;
   game: GameState;
+  /** a sample of who's watching (capped so big crowds stay cheap) */
   spectators: Spectator[];
+  /** everyone watching */
+  spectatorCount: number;
   chat: ChatMessage[];
   rematchRoomId: string | null;
   /**
@@ -36,6 +41,27 @@ export interface RoomSnapshot {
   deadlines: Partial<Record<Color, number>>;
   /** server clock when this snapshot was sent, to correct client clock drift */
   serverNow: number;
+  /** goes up by one with every change; patches build on it */
+  v: number;
+}
+
+/**
+ * What changed in a room, sent instead of the whole room. Apply it only on top
+ * of version v - 1; otherwise ask for the full room again (room:join).
+ * Chat isn't here (chat:message) and neither are spectators (room:crowd).
+ */
+export interface RoomPatch extends Omit<RoomSnapshot, 'game' | 'chat' | 'spectators' | 'spectatorCount'> {
+  game: Omit<GameState, 'moves'>;
+  /** total moves after this change */
+  moveCount: number;
+  /** the move just played, if this change added one */
+  move?: PlayedMove;
+}
+
+export interface Crowd {
+  roomId: string;
+  spectators: Spectator[];
+  spectatorCount: number;
 }
 
 export interface LiveGame {
@@ -78,14 +104,19 @@ export interface ClientToServerEvents {
   'room:seat': (p: RoomRef & { team: Color | 'spectator' }, ack: Cb) => void;
   'room:time': (p: RoomRef & { timeControl: string }, ack: Cb) => void;
   'room:watchable': (p: RoomRef & { watchable: boolean }, ack: Cb) => void;
+  'room:mute-spectators': (p: RoomRef & { muted: boolean }, ack: Cb) => void;
   'game:move': (p: RoomRef & { from: string; to: string; promotion?: string }, ack: Cb) => void;
   'game:resign': (p: RoomRef, ack: Cb) => void;
   'game:abort': (p: RoomRef, ack: Cb) => void;
   'game:draw': (p: RoomRef, ack: Cb) => void;
   'game:rematch': (p: RoomRef, ack: Cb<{ roomId: string }>) => void;
   'chat:send': (p: RoomRef & { text: string }, ack: Cb) => void;
+  /** stats plus the top few live games (home page) */
   'lobby:watch': (ack: Cb<{ stats: LobbyStats; games: LiveGame[] }>) => void;
   'lobby:unwatch': () => void;
+  /** every live game (the live games page) */
+  'live:watch': (ack: Cb<{ games: LiveGame[] }>) => void;
+  'live:unwatch': () => void;
   'queue:join': (p: { timeControl: string }, ack: Cb) => void;
   'queue:leave': (ack: Cb) => void;
   /** Start a 1v1 with the next player who also opts in, instead of waiting for a full 2v2. */
@@ -98,10 +129,17 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   'room:state': (room: RoomSnapshot) => void;
+  /** a small update on top of the room the client already has */
+  'room:patch': (patch: RoomPatch) => void;
+  /** spectators came or went; sent instead of a full room:state, at most once a second */
+  'room:crowd': (p: Crowd) => void;
   'chat:message': (p: { roomId: string; message: ChatMessage }) => void;
   'room:rematch': (p: { roomId: string; rematchRoomId: string }) => void;
   'lobby:stats': (stats: LobbyStats) => void;
+  /** every live game, to 'live:watch' subscribers */
   'live:games': (games: LiveGame[]) => void;
+  /** the top few live games, to 'lobby:watch' subscribers */
+  'lobby:games': (games: LiveGame[]) => void;
   'party:state': (party: Party) => void;
   'queue:state': (p: { timeControl: string | null }) => void;
   'match:found': (p: { roomId: string }) => void;
@@ -129,4 +167,19 @@ export function parseTimeControl(key: string): TimeControl | null | undefined {
 export function timeControlKey(tc: TimeControl | null): string {
   if (!tc) return 'untimed';
   return `${Math.round(tc.initialMs / 60_000)}+${Math.round(tc.incrementMs / 1000)}`;
+}
+
+/**
+ * Apply a patch to the room a client already has. Returns the same room for a
+ * stale or duplicate patch, and null when there's a gap: then ask for the full
+ * room again.
+ */
+export function applyPatch(room: RoomSnapshot, p: RoomPatch): RoomSnapshot | null {
+  if (p.id !== room.id) return room;
+  if (p.v <= room.v) return room;
+  if (p.v !== room.v + 1) return null;
+  const moves = p.move ? [...room.game.moves, p.move] : room.game.moves.slice(0, p.moveCount);
+  if (moves.length !== p.moveCount) return null;
+  const { moveCount: _count, move: _move, game, ...rest } = p;
+  return { ...room, ...rest, game: { ...game, moves } };
 }

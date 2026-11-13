@@ -5,6 +5,7 @@ Allow: /
 Sitemap: https://www.relaychess.com/sitemap.xml
 
 # Disallow admin and API routes
+Allow: /api/og/
 Disallow: /api/
 Disallow: /_next/
 Disallow: /404

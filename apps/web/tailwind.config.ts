@@ -84,10 +84,12 @@ const config = {
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
         'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } },
+        'crowd-pop': { '0%': { transform: 'scale(1)' }, '35%': { transform: 'scale(1.18)' }, '100%': { transform: 'scale(1)' } },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'crowd-pop': 'crowd-pop 0.6s ease-out',
       },
     },
   },

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Chessboard } from 'react-chessboard';
-import useLiveGames from '@/hooks/useLiveGames';
+import { useTopLiveGames } from '@/hooks/useLiveGames';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { getTimerLabel } from '@/components/TimerSelection';
 import { formatAnonUsername } from '@/utils/strings';
@@ -9,7 +9,7 @@ const team = (names: string[]) => (names.length ? names.map((n) => formatAnonUse
 
 /** Home page: one slim row of live games. Hidden when nothing is live. */
 const LiveGamesStrip = () => {
-  const { liveGames } = useLiveGames();
+  const { liveGames } = useTopLiveGames();
   if (liveGames.length === 0) return null;
 
   return (

@@ -6,7 +6,7 @@ import { attachRealtime, type IO } from './realtime/socket';
 import type { Store } from './store/types';
 
 /** HTTP API and socket.io on one port. */
-export function createServer(config: Config, store: Store, opts: { abandonMs?: number; lobbyMs?: number; flushMs?: number } = {}) {
+export function createServer(config: Config, store: Store, opts: { abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number } = {}) {
   let realtime: ReturnType<typeof attachRealtime> | undefined;
   const app = createHttpApp({
     config,

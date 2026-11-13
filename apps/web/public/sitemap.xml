@@ -6,31 +6,31 @@
             http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
 <url>
-  <loc>https://relaychess.com/</loc>
+  <loc>https://www.relaychess.com/</loc>
   <lastmod>2024-12-19T00:00:00+00:00</lastmod>
   <changefreq>daily</changefreq>
   <priority>1.00</priority>
 </url>
 <url>
-  <loc>https://relaychess.com/leaderboard</loc>
+  <loc>https://www.relaychess.com/leaderboard</loc>
   <lastmod>2024-12-19T00:00:00+00:00</lastmod>
   <changefreq>daily</changefreq>
   <priority>0.90</priority>
 </url>
 <url>
-  <loc>https://relaychess.com/live-games</loc>
+  <loc>https://www.relaychess.com/live-games</loc>
   <lastmod>2024-12-19T00:00:00+00:00</lastmod>
   <changefreq>hourly</changefreq>
   <priority>0.85</priority>
 </url>
 <url>
-  <loc>https://relaychess.com/privacy-policy</loc>
+  <loc>https://www.relaychess.com/privacy-policy</loc>
   <lastmod>2024-12-19T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.50</priority>
 </url>
 <url>
-  <loc>https://relaychess.com/terms-of-service</loc>
+  <loc>https://www.relaychess.com/terms-of-service</loc>
   <lastmod>2024-12-19T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.50</priority>

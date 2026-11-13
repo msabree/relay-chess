@@ -62,7 +62,8 @@ export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
   const requireAuth: RequestHandler = (req, res, next) => (req.who ? next() : res.status(401).json({ error: 'unauthorized' }));
 
   const contactLimit = limiter(5, 60 * 60_000);
-  const playerLimit = limiter(30, 60_000);
+  // Per IP. Generous: a class or club on one Wi-Fi (or a mobile carrier) shares an IP.
+  const playerLimit = limiter(300, 60_000);
 
   // `playing` counts every game in progress (private too): check it's 0 before a deploy.
   app.get('/health', (_req, res) => res.json({ ok: true, store: store.kind, playing: playing() }));

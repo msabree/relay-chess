@@ -3,19 +3,24 @@ import { ChessGameContext } from '@/contexts/ChessGame';
 
 /** Room chat. Everyone in the room, including the other team, can read it. */
 const RoomChat = () => {
-  const { room, game, sendChatMessage, userId } = useContext(ChessGameContext);
+  const { room, game, sendChatMessage, userId, teamColor } = useContext(ChessGameContext);
   const [text, setText] = useState('');
-  const end = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
   const chat = room?.chat ?? [];
   const sideOf = (id: string) => (game?.teams.w.some((p) => p.id === id) ? 'w' : game?.teams.b.some((p) => p.id === id) ? 'b' : null);
 
+  // Scroll only the chat box: scrollIntoView also scrolls the page and moves the board.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: 'nearest' });
+    const el = list.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [chat.length]);
+
+  // Players muted spectators; spectators can't post until the game ends.
+  const silenced = !!room?.spectatorsMuted && game?.status === 'playing' && !teamColor;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ul className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3" aria-live="polite">
+      <ul ref={list} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3" aria-live="polite">
         {chat.length === 0 && <li className="text-sm text-fg-subtle">Say hi. The other team can read this too.</li>}
         {chat.map((m) => {
           const side = sideOf(m.userId);
@@ -32,7 +37,6 @@ const RoomChat = () => {
             </li>
           );
         })}
-        <div ref={end} />
       </ul>
       <form
         className="flex gap-2 border-t border-line p-3"
@@ -49,11 +53,12 @@ const RoomChat = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={500}
-          placeholder="Message the room"
+          placeholder={silenced ? 'Players muted spectators until the game ends' : 'Message the room'}
+          disabled={silenced}
           autoComplete="off"
-          className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 text-sm placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 text-sm placeholder:text-fg-subtle focus:border-accent focus:outline-none disabled:opacity-60"
         />
-        <button type="submit" className="h-10 rounded-lg bg-fg px-4 text-sm font-semibold text-bg hover:bg-fg/85 disabled:opacity-40" disabled={!text.trim()}>
+        <button type="submit" className="h-10 rounded-lg bg-fg px-4 text-sm font-semibold text-bg hover:bg-fg/85 disabled:opacity-40" disabled={silenced || !text.trim()}>
           Send
         </button>
       </form>
