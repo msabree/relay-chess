@@ -125,6 +125,9 @@ const LandingPage = () => {
                 </div>
               ))}
             </div>
+            <Link href="/how-to-play" className="mt-10 inline-block text-sm font-medium underline underline-offset-4 hover:text-fg-muted">
+              Full rules and tips for team chess
+            </Link>
           </div>
         </section>
 
