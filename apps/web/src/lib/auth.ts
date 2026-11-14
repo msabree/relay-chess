@@ -89,7 +89,10 @@ export async function ensurePlayer(): Promise<Stored> {
   return inflight;
 }
 
-/** Email a sign-in code (the email also has a link to /signin). */
+/**
+ * Email a sign-in code (the email also has a link to /signin).
+ * @public used by AccountSection, which is parked for now
+ */
 export async function sendSignInCode(email: string) {
   const res = await post('/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' });
   if (!res.ok) throw new Error(res.status === 429 ? 'rate-limited' : 'send-failed');
@@ -109,7 +112,10 @@ export async function signInWithCode(email: string, code: string): Promise<Me> {
   return s.user;
 }
 
-/** Sign out and continue as a new guest. */
+/**
+ * Sign out and continue as a new guest.
+ * @public used by AccountSection, which is parked for now
+ */
 export async function signOut() {
   const session = read()?.session;
   if (session) await post('/api/auth/sign-out', {}, session).catch(() => {});
