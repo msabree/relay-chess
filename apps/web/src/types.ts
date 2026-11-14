@@ -2,17 +2,17 @@ export type TEAM_COLOR = 'w' | 'b';
 
 // GAME TYPES
 export enum GAME_TYPES {
-    // eslint-disable-next-line no-unused-vars
+     
     DAILY = 'daily',
-    // eslint-disable-next-line no-unused-vars
+     
     BULLET = 'bullet',
-    // eslint-disable-next-line no-unused-vars
+     
     BLITZ = 'blitz',
-    // eslint-disable-next-line no-unused-vars
+     
     RAPID = 'rapid',
-    // eslint-disable-next-line no-unused-vars
+     
     CLASSIC = 'classic',
-    // eslint-disable-next-line no-unused-vars
+     
     UNTIMED = 'untimed',
 }
 

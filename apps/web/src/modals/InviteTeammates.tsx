@@ -71,13 +71,13 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
       <DialogContent className='bg-surface border border-line shadow-xl max-w-sm'>
         <DialogHeader>
           <DialogTitle className='text-center text-2xl font-semibold text-fg-muted'>
-            {"Teammate Lobby"}
+            {'Teammate Lobby'}
           </DialogTitle>
         </DialogHeader>
 
         <div className='space-y-6 py-4'>
           <div className='text-center text-fg-muted'>
-            {isHost ? "Share the link to invite friends to your team." : "You were invited to join a team. Host will start the game when all players are ready."}
+            {isHost ? 'Share the link to invite friends to your team.' : 'You were invited to join a team. Host will start the game when all players are ready.'}
           </div>
 
           {isHost && <div className='space-y-4'>
@@ -89,12 +89,12 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
               {isCopied ? (
                 <>
                   <Check className='h-4 w-4 text-success' />
-                  <span>{"Copied!"}</span>
+                  <span>{'Copied!'}</span>
                 </>
               ) : (
                 <>
                   <Copy className='h-4 w-4' />
-                  <span>{"Copy Invite Code"}</span>
+                  <span>{'Copy Invite Code'}</span>
                 </>
               )}
             </Button>
@@ -127,7 +127,7 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
                       {formatAnonUsername(teammate.username)}
                       {teammate.userId === userId && (
                         <span className="ml-2 font-bold text-accent-ink bg-accent px-2 py-0.5 rounded">
-                          {"(You)"}
+                          {'(You)'}
                         </span>
                       )}
                     </div>
@@ -139,19 +139,19 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
 
           {!hasJoinedTeammates && (
             <div className='text-center py-4'>
-              <div className='text-fg-muted mb-2'>{"Waiting for teammates to join..."}</div>
+              <div className='text-fg-muted mb-2'>{'Waiting for teammates to join...'}</div>
               <div className='animate-pulse text-accent-ink'>• • •</div>
             </div>
           )}
           {matchmakingStarted && !newGameRoomId && (
             <div className='text-center py-4'>
-              <div className='text-fg-muted mb-2'>{"Finding Game..."}</div>
+              <div className='text-fg-muted mb-2'>{'Finding Game...'}</div>
               <div className='animate-pulse text-accent-ink'>• • •</div>
             </div>
           )}
           {newGameRoomId && (
             <div className='text-center py-4'>
-              <div className='text-fg-muted mb-2'>{"Game match created! Redirecting to game..."}</div>
+              <div className='text-fg-muted mb-2'>{'Game match created! Redirecting to game...'}</div>
               <div className='animate-pulse text-accent-ink'>• • •</div>
             </div>
           )}
@@ -163,14 +163,14 @@ export default function InviteTeammates({ open, onClose }: InviteTeammatesProps)
             className='text-fg-muted hover:text-fg-muted hover:bg-raised'
             onClick={handleCancel}
           >
-            {"Cancel"}
+            {'Cancel'}
           </Button>
           {isHost && <Button 
             className='bg-orange-500 hover:bg-orange-600 text-fg font-medium px-6 py-2 rounded-lg transition-all duration-200'
             disabled={!hasJoinedTeammates || matchmakingStarted}
             onClick={handleFindGame}
           >
-            {matchmakingStarted && hasJoinedTeammates ? "Finding Game..." : "Find Game"}
+            {matchmakingStarted && hasJoinedTeammates ? 'Finding Game...' : 'Find Game'}
           </Button>}
         </DialogFooter>
       </DialogContent>

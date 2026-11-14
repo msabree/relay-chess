@@ -8,14 +8,14 @@ export default function Custom404() {
   return (
     <>
       <Head>
-        <title>{"404 - Page Not Found | Relay Chess"}</title>
+        <title>{'404 - Page Not Found | Relay Chess'}</title>
       </Head>
       <div className='flex flex-col justify-center content-center'>
-        <div className='z-10 m-auto text-4xl bold justify-center text-fg mb-10 mt-10'>{"404 - Page Not Found"}</div>
+        <div className='z-10 m-auto text-4xl bold justify-center text-fg mb-10 mt-10'>{'404 - Page Not Found'}</div>
         <div className='m-auto'>
           <Link href={'/'}>
             <Button className='text-fg text-2xl mt-5'>
-              {"Go Home"}
+              {'Go Home'}
             </Button>
           </Link>
         </div>
@@ -23,7 +23,7 @@ export default function Custom404() {
           <div className='h-[300px] w-[300px]'>
             <Chessboard options={{ position: 'kkkkkkkk/kkkkkkkk/8/8/8/8/KKKKKKKK/KKKKKKKK' }} />
           </div>
-          <Image src='/media/huh.png' alt={"404"} width={500} height={300} />
+          <Image src='/media/huh.png' alt={'404'} width={500} height={300} />
         </div>
       </div>
     </>

@@ -19,7 +19,7 @@ const RULES = [
   },
   {
     title: 'Teammates take turns',
-    body: `Your team's moves rotate through its players in seat order. If you sit first on White, you play White's first move, your partner plays the next one, and so on. The game shows who is moving now and who is up next.`,
+    body: "Your team's moves rotate through its players in seat order. If you sit first on White, you play White's first move, your partner plays the next one, and so on. The game shows who is moving now and who is up next.",
   },
   {
     title: 'No huddles',
@@ -31,7 +31,7 @@ const RULES = [
   },
   {
     title: 'One clock per team',
-    body: `Timed games give each team one clock, like a normal game. The clock starts once both sides have moved, and the increment is added after every move. Untimed games are available too.`,
+    body: 'Timed games give each team one clock, like a normal game. The clock starts once both sides have moved, and the increment is added after every move. Untimed games are available too.',
   },
   {
     title: 'Resigning, draws and leaving',
@@ -42,10 +42,10 @@ const RULES = [
 const TIPS = [
   {
     title: 'Play simple, readable moves',
-    body: `Your partner can't ask what you meant. Moves with an obvious idea, like developing a piece or taking a free pawn, are easier to follow up than a deep trap.`,
+    body: "Your partner can't ask what you meant. Moves with an obvious idea, like developing a piece or taking a free pawn, are easier to follow up than a deep trap.",
   },
   {
-    title: `Don't set up a combination you can't finish`,
+    title: "Don't set up a combination you can't finish",
     body: 'Remember that your next move is not your own. A sacrifice that needs three precise follow-ups depends on your partner finding them.',
   },
   {
@@ -54,7 +54,7 @@ const TIPS = [
   },
   {
     title: 'Queue your move when you are next',
-    body: `When you are up next for your team, you can set your move in advance and it plays as soon as it's your turn. It saves time on the clock.`,
+    body: "When you are up next for your team, you can set your move in advance and it plays as soon as it's your turn. It saves time on the clock.",
   },
   {
     title: 'Hold the line under pressure',

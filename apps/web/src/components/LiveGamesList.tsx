@@ -23,24 +23,24 @@ const LiveGamesList = () => {
   const formatPlayers = (usernames: string[]) =>
     usernames.length > 0
       ? usernames.map(u => formatAnonUsername(u)).join(', ')
-      : "Anonymous";
+      : 'Anonymous';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-3xl font-bold text-fg">
-            {"Live Games"}
+            {'Live Games'}
           </h1>
           {isConnected && (
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-              <span className="text-sm text-fg-muted">{"Live"}</span>
+              <span className="text-sm text-fg-muted">{'Live'}</span>
             </div>
           )}
         </div>
         <p className="text-fg-muted">
-          {"Watch games in progress and learn from top players"}
+          {'Watch games in progress and learn from top players'}
         </p>
       </div>
 
@@ -48,17 +48,17 @@ const LiveGamesList = () => {
         <div className="glass-effect border border-line rounded-2xl p-12 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-            <span className="text-fg-muted">{"Connecting..."}</span>
+            <span className="text-fg-muted">{'Connecting...'}</span>
           </div>
         </div>
       ) : liveGames.length === 0 ? (
         <div className="glass-effect border border-line rounded-2xl p-12 text-center">
           <Eye className="w-16 h-16 mx-auto mb-4 text-fg-subtle" />
           <p className="text-fg-muted text-lg mb-2">
-            {"No active games at the moment"}
+            {'No active games at the moment'}
           </p>
           <p className="text-fg-subtle text-sm">
-            {"Start a game to see it here!"}
+            {'Start a game to see it here!'}
           </p>
         </div>
       ) : (
@@ -106,7 +106,7 @@ const LiveGamesList = () => {
                   <div className="text-fg font-semibold mb-1 text-sm">
                     {`White: ${formatPlayers(game.whiteTeam.usernames)}`}
                   </div>
-                  <div className="text-fg-subtle text-xs mb-1 text-center">{"vs"}</div>
+                  <div className="text-fg-subtle text-xs mb-1 text-center">{'vs'}</div>
                   <div className="text-fg font-semibold text-sm">
                     {`Black: ${formatPlayers(game.blackTeam.usernames)}`}
                   </div>
@@ -119,7 +119,7 @@ const LiveGamesList = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4" />
-                    <span className="text-xs">{getTimerLabel(game.timeControl, "No Timer")}</span>
+                    <span className="text-xs">{getTimerLabel(game.timeControl, 'No Timer')}</span>
                   </div>
                 </div>
 
@@ -136,7 +136,7 @@ const LiveGamesList = () => {
                   <span>{formatRelativeTime(game.lastMoveAt)}</span>
                   <div className="flex items-center gap-1 text-accent-ink group-hover:text-accent-ink transition-colors">
                     <Play className="w-3 h-3" />
-                    <span className="font-medium">{"Watch"}</span>
+                    <span className="font-medium">{'Watch'}</span>
                   </div>
                 </div>
               </div>

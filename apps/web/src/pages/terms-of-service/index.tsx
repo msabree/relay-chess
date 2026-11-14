@@ -10,8 +10,8 @@ export default function TermsOfService() {
   return (
     <>
       <Head>
-        <title>{"Terms of Service - Relay Chess"}</title>
-        <meta name="description" content={"Terms of Service for Relay Chess - Team Chess Reimagined. Read our terms and conditions for using our platform."} />
+        <title>{'Terms of Service - Relay Chess'}</title>
+        <meta name="description" content={'Terms of Service for Relay Chess - Team Chess Reimagined. Read our terms and conditions for using our platform.'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
