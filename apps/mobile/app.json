@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Relay Chess",
+    "slug": "relay-chess",
+    "version": "4.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/relay-chess.png",
+    "scheme": "relaychess",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.relaychess",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#1a1f3c"
+      },
+      "package": "com.relaychess"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-mark.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#0E0F11"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1e581ed8-bba1-42c5-923c-95402c6c4a94"
+      }
+    }
+  }
+}
