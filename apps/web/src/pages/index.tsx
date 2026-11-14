@@ -40,13 +40,13 @@ const LandingPage = () => {
   return (
     <>
       <Head>
-        <title>Relay Chess: 2v2 chess with your friends</title>
-        <meta name="description" content="Two teams, one board. Teammates take turns making moves. Free, open source, and no account needed." />
+        <title>Relay Chess: 2v2 team chess online with friends</title>
+        <meta name="description" content="Play team chess online: two teams, one board, and teammates take turns making moves. Free 2v2 chess, open source, no account needed." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={SITE_URL} />
-        <meta property="og:title" content="Relay Chess: 2v2 chess with your friends" />
-        <meta property="og:description" content="Two teams, one board. Teammates take turns making moves." />
+        <meta property="og:title" content="Relay Chess: 2v2 team chess online with friends" />
+        <meta property="og:description" content="Team chess online: two teams, one board, and teammates take turns making moves." />
         <meta property="og:site_name" content="Relay Chess" />
         <meta property="og:image" content={OG_IMAGE} />
         <meta property="og:image:width" content="1200" />
@@ -64,7 +64,7 @@ const LandingPage = () => {
           <div>
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-sm text-fg-muted">
               <span className="h-2 w-2 rounded-full bg-accent" />
-              2v2 chess · free and open source
+              2v2 team chess · free and open source
             </p>
             <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
               Chess is better
