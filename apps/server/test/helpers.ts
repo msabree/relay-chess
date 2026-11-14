@@ -1,6 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import { applyPatch, type ClientToServerEvents, type RoomSnapshot, type ServerToClientEvents } from '@relay-chess/game';
 import { io as connect, type Socket } from 'socket.io-client';
+import { expect } from 'vitest';
 import { createServer } from '../src/app';
 import { loadConfig } from '../src/config';
 import { createMemoryStore } from '../src/store/memory';
@@ -54,7 +55,10 @@ export const SECRET = 'test-secret-0123456789';
 export async function startServer(opts: { abandonMs?: number; lobbyMs?: number } = {}) {
   const config = loadConfig({ AUTH_SECRET: SECRET, CORS_ORIGINS: 'http://localhost:3000' });
   const store = createMemoryStore();
-  const server = createServer(config, store, { flushMs: 10, liveFlushMs: 10, ...opts });
+  /** last sign-in code emailed to each address */
+  const codes = new Map<string, string>();
+  const mail = async (email: string, code: string) => void codes.set(email, code);
+  const server = createServer(config, store, { flushMs: 10, liveFlushMs: 10, mail, ...opts });
   await new Promise<void>((r) => server.http.listen(0, r));
   const url = `http://localhost:${(server.http.address() as AddressInfo).port}`;
   const sockets: Client[] = [];
@@ -79,6 +83,23 @@ export async function startServer(opts: { abandonMs?: number; lobbyMs?: number }
     return s;
   };
 
+  /** Sign in with an email code, then swap the session for a player token. */
+  const signIn = async (email: string, guestToken?: string) => {
+    expect((await api('/api/auth/email-otp/send-verification-otp', { method: 'POST', json: { email, type: 'sign-in' } })).status).toBe(200);
+    await sleep(10);
+    const res = await fetch(url + '/api/auth/sign-in/email-otp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, otp: codes.get(email) }),
+    });
+    expect(res.status).toBe(200);
+    const session = res.headers.get('set-auth-token')!;
+    expect(session).toBeTruthy();
+    const r = await api('/account/session', { method: 'POST', token: session, json: { guestToken } });
+    expect(r.status).toBe(200);
+    return { session, ...(r.body as { token: string; user: { id: string; username: string; email: string } }) };
+  };
+
   /** A connected player: token, user and socket. */
   const player = async () => {
     const auth = await guest();
@@ -91,6 +112,8 @@ export async function startServer(opts: { abandonMs?: number; lobbyMs?: number }
     url,
     api,
     guest,
+    signIn,
+    codes,
     client,
     player,
     async stop() {

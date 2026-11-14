@@ -2,13 +2,14 @@ import { randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
 /**
- * Who is making a request. There are no accounts: everyone gets a random id
- * and a nickname, remembered by their browser for 30 days.
+ * Who is making a request. Everyone starts as a guest with a random id and a
+ * nickname, remembered for 30 days. Signing in (accounts.ts) keeps that id and
+ * reserves the name.
  */
 export interface Identity {
   id: string;
   name: string;
-  /** always true today; kept so accounts can come back without a protocol change */
+  /** false once the player signed in with an account (their name is then reserved) */
   guest: boolean;
 }
 
@@ -32,7 +33,7 @@ export function verifyAccessToken(secret: string, token: string): Identity | nul
   try {
     const p = jwt.verify(token, secret, { audience: AUDIENCE, issuer: ISSUER }) as jwt.JwtPayload;
     if (typeof p.sub !== 'string' || typeof p.name !== 'string') return null;
-    return { id: p.sub, name: p.name, guest: true };
+    return { id: p.sub, name: p.name, guest: p.guest !== false };
   } catch {
     return null;
   }

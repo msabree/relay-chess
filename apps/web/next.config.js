@@ -11,6 +11,11 @@ const nextConfig = {
       { source: '/contact', destination: '/about#contact', permanent: true },
     ];
   },
+  // Only production gets indexed. Staging (main) is a Vercel preview deploy.
+  async headers() {
+    if (process.env.VERCEL_ENV === 'production') return [];
+    return [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }];
+  },
 };
 
 module.exports = nextConfig;

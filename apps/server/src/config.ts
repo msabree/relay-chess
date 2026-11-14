@@ -7,6 +7,13 @@ const schema = z.object({
   DATABASE_NAME: z.string().default('relaychess'),
   /** Games from before the current collection (the account era). Added to the live count. */
   LEGACY_GAMES_PLAYED: z.coerce.number().int().min(0).default(0),
+  /** This server's public URL. Accounts (Better Auth) build links from it. */
+  SERVER_URL: z.string().url().optional(),
+  /** The web app. Sign-in emails link here. */
+  WEB_URL: z.string().url().default('http://localhost:3000'),
+  /** Sends sign-in codes. Leave empty to print codes to the server log instead (local dev). */
+  RESEND_API_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
+  EMAIL_FROM: z.string().default('Relay Chess <play@relaychess.com>'),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')

@@ -1,8 +1,10 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
+import { toNodeHandler } from 'better-auth/node';
 import { contactSchema } from '@relay-chess/game';
 import { z } from 'zod';
 import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
+import type { Accounts } from './accounts';
 import type { Config } from './config';
 import { leaderboardPage, leaderboardPosition, PERIODS } from './leaderboard';
 import type { Store } from './store/types';
@@ -41,16 +43,20 @@ function limiter(max: number, windowMs: number) {
 export interface HttpDeps {
   config: Config;
   store: Store;
+  accounts: Accounts;
   liveGames: () => unknown[];
   /** games in progress, private ones included */
   playing: () => number;
 }
 
-export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
+export function createHttpApp({ config, store, accounts, liveGames, playing }: HttpDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
-  app.use(cors({ origin: config.CORS_ORIGINS }));
+  // set-auth-token carries the account session to the browser (bearer, no cookies)
+  app.use(cors({ origin: config.CORS_ORIGINS, exposedHeaders: ['set-auth-token'] }));
+  // Better Auth reads its own bodies: mount it before express.json
+  app.all('/api/auth/*', toNodeHandler(accounts.auth));
   app.use(express.json({ limit: '1mb' }));
 
   // Identify the caller if a token is present. Routes decide whether it's required.
@@ -77,16 +83,39 @@ export function createHttpApp({ config, store, liveGames, playing }: HttpDeps) {
     res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: me(who) });
   });
 
+  /**
+   * Swap an account session (Authorization: Bearer <session token>) for a
+   * player token. The first time, pass the guest token you were playing with
+   * and the account takes over that player (id, name, scores).
+   */
+  app.post(
+    '/account/session',
+    wrap(async (req, res) => {
+      const user = await accounts.sessionUser(req.headers);
+      if (!user) return res.status(401).json({ error: 'unauthorized' });
+      const body = z.object({ guestToken: z.string().max(2000).optional() }).safeParse(req.body ?? {});
+      const guest = body.success && body.data.guestToken ? verifyAccessToken(config.AUTH_SECRET, body.data.guestToken) : null;
+      const who = await accounts.playerFor(user, guest);
+      res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: { ...me(who), email: user.email } });
+    }),
+  );
+
   app.get('/me', requireAuth, (req, res) => res.json({ user: me(req.who!) }));
 
-  /** Change your nickname. Names aren't reserved; you get a fresh token with the new name. */
-  app.patch('/me', requireAuth, (req, res) => {
-    const body = z.object({ username: z.string().max(40) }).strict().safeParse(req.body);
-    const name = body.success ? cleanNickname(body.data.username) : '';
-    if (!NICKNAME.test(name)) return res.status(400).json({ error: 'invalid-name' });
-    const who: Identity = { ...req.who!, name };
-    res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: me(who) });
-  });
+  /** Change your nickname; you get a fresh token. Names held by an account are off limits. */
+  app.patch(
+    '/me',
+    requireAuth,
+    wrap(async (req, res) => {
+      const body = z.object({ username: z.string().max(40) }).strict().safeParse(req.body);
+      const name = body.success ? cleanNickname(body.data.username) : '';
+      if (!NICKNAME.test(name)) return res.status(400).json({ error: 'invalid-name' });
+      if (await accounts.nameTaken(name, req.who!.id)) return res.status(409).json({ error: 'name-taken' });
+      if (!req.who!.guest) await accounts.rename(req.who!.id, name);
+      const who: Identity = { ...req.who!, name };
+      res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: me(who) });
+    }),
+  );
 
   // ---- games ----
 

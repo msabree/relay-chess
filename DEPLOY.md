@@ -27,6 +27,7 @@ git branch prod && git push -u origin prod
 1. Dashboard → **New → Blueprint** → pick this repo. It creates both services from `render.yaml`.
 2. Fill in each service's secrets, **different per environment**:
    - `AUTH_SECRET`: `openssl rand -base64 48` (signs player tokens; never leaves Render)
+   - `RESEND_API_KEY`: sends sign-in codes. Verify the `EMAIL_FROM` domain (default `relaychess.com`) in Resend first.
    - `MONGODB_URL`: Atlas connection string. Same cluster is fine.
    - `DATABASE_NAME`: any name; use a different one for staging and production. The server creates its collections (`recent_games`, `scores`) on first start and never touches anything else in the database.
    - `LEGACY_GAMES_PLAYED` (production only, set in `render.yaml`): 6177, the games in the old account-era `games` collection. It is added to the live count shown on the homepage.
