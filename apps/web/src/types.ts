@@ -79,6 +79,8 @@ export interface ChatMessage {
 export interface UserProfile {
     _id: string;
     username: string;
+    /** set when signed in */
+    email?: string;
 }
 
 export interface GameMove {

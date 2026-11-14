@@ -11,7 +11,7 @@ export const useUser = () => {
     'player',
     async () => {
       const { user } = await ensurePlayer();
-      return { _id: user.id, username: user.username };
+      return { _id: user.id, username: user.username, ...(user.email ? { email: user.email } : {}) };
     },
     { refetchOnWindowFocus: false, staleTime: Infinity },
   );
