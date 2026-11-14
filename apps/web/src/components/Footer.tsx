@@ -14,7 +14,8 @@ const Footer = (_props: { variant?: 'dark' | 'light' }) => (
         <a href={NEW_ISSUE_URL} target="_blank" rel="noopener noreferrer" className="text-fg-muted hover:text-fg">
           Report an issue or feature request
         </a>
-        <Link href="/contact" className="text-fg-muted hover:text-fg">Contact</Link>
+        <Link href="/about" className="text-fg-muted hover:text-fg">About</Link>
+        <Link href="/about#contact" className="text-fg-muted hover:text-fg">Contact</Link>
         <Link href="/terms-of-service" className="text-fg-muted hover:text-fg">Terms</Link>
         <Link href="/privacy-policy" className="text-fg-muted hover:text-fg">Privacy</Link>
       </nav>
