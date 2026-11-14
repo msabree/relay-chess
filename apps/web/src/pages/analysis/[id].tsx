@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import type { GetServerSideProps } from 'next';
-import ClientPage from './ClientPage';
+import ClientPage from '@/components/review/AnalysisPage';
 import { SERVER_URL } from '@/constants';
 import { describeResult } from '@/lib/result';
 

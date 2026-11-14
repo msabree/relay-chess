@@ -93,115 +93,115 @@ const GameScreen = ({ lightColor, darkColor }: { lightColor?: string; darkColor?
     <>
       {/* Desktop */}
       {desktop ? (
-      <div className="mx-auto flex max-w-[1400px] justify-center gap-6 px-6 py-5">
-        <section aria-label="Board" className="flex flex-col gap-2" style={{ width: 'min(100%, calc(100dvh - 56px - 40px - 152px))', minWidth: 420 }}>
-          <TeamBar color={top} />
-          {board}
-          <TeamBar color={bottom} />
-        </section>
-        <aside
-          aria-label="Game panel"
-          className="flex w-[360px] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-surface"
-          style={{ height: 'calc(100dvh - 56px - 40px)', maxHeight: 900 }}
-        >
-          {setup ? (
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <RoomSetup />
-            </div>
-          ) : (
-            <>
-              <div className="flex min-h-[40px] items-center justify-between px-4 pb-1 pt-3">
-                <h2 className="text-sm font-semibold">Moves</h2>
-                {room?.spectators.length ? <Crowd /> : <span className="text-xs text-fg-subtle">initials show who played it</span>}
-              </div>
+        <div className="mx-auto flex max-w-[1400px] justify-center gap-6 px-6 py-5">
+          <section aria-label="Board" className="flex flex-col gap-2" style={{ width: 'min(100%, calc(100dvh - 56px - 40px - 152px))', minWidth: 420 }}>
+            <TeamBar color={top} />
+            {board}
+            <TeamBar color={bottom} />
+          </section>
+          <aside
+            aria-label="Game panel"
+            className="flex w-[360px] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-surface"
+            style={{ height: 'calc(100dvh - 56px - 40px)', maxHeight: 900 }}
+          >
+            {setup ? (
               <div className="min-h-0 flex-1 overflow-y-auto">
-                <MoveList />
+                <RoomSetup />
               </div>
-              {(reviewBanner || offerNote) && (
-                <div className="space-y-2 px-3 pb-2">
-                  {reviewBanner}
-                  {offerNote && <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium">{offerNote}</p>}
+            ) : (
+              <>
+                <div className="flex min-h-[40px] items-center justify-between px-4 pb-1 pt-3">
+                  <h2 className="text-sm font-semibold">Moves</h2>
+                  {room?.spectators.length ? <Crowd /> : <span className="text-xs text-fg-subtle">initials show who played it</span>}
                 </div>
-              )}
-            </>
-          )}
-          <div className="border-t border-line">
-            <GameActions />
-          </div>
-          <div className={`flex shrink-0 flex-col border-t border-line ${setup ? 'h-[220px]' : 'h-[300px]'}`}>
-            <div className="flex min-h-[40px] items-center justify-between px-4 pt-3">
-              <h2 className="text-sm font-semibold">Room chat</h2>
-              <MuteSpectators />
-              {!(teamColor && room?.spectators.length) && <span className="text-xs text-fg-subtle">everyone can read this</span>}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <MoveList />
+                </div>
+                {(reviewBanner || offerNote) && (
+                  <div className="space-y-2 px-3 pb-2">
+                    {reviewBanner}
+                    {offerNote && <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium">{offerNote}</p>}
+                  </div>
+                )}
+              </>
+            )}
+            <div className="border-t border-line">
+              <GameActions />
             </div>
-            <div className="min-h-0 flex-1">
-              <RoomChat />
+            <div className={`flex shrink-0 flex-col border-t border-line ${setup ? 'h-[220px]' : 'h-[300px]'}`}>
+              <div className="flex min-h-[40px] items-center justify-between px-4 pt-3">
+                <h2 className="text-sm font-semibold">Room chat</h2>
+                <MuteSpectators />
+                {!(teamColor && room?.spectators.length) && <span className="text-xs text-fg-subtle">everyone can read this</span>}
+              </div>
+              <div className="min-h-0 flex-1">
+                <RoomChat />
+              </div>
             </div>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
 
       ) : (
       /* Mobile and tablet */
-      <div className="flex flex-col gap-2 pb-6 pt-2">
-        <div className="px-3">
-          <TeamBar color={top} compact />
-        </div>
-        <div className="mx-auto w-full max-w-[640px]">{board}</div>
-        <div className="px-3">
-          <TeamBar color={bottom} compact />
-        </div>
-        {!!room?.spectators.length && (
-          <div className="flex justify-end px-3">
-            <Crowd />
+        <div className="flex flex-col gap-2 pb-6 pt-2">
+          <div className="px-3">
+            <TeamBar color={top} compact />
           </div>
-        )}
-        <div className="mx-auto w-full max-w-[640px]">
-          {!setup && <MoveList horizontal />}
-          {(reviewBanner || offerNote) && (
-            <div className="space-y-2 px-3 py-1">
-              {reviewBanner}
-              {offerNote && <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium">{offerNote}</p>}
+          <div className="mx-auto w-full max-w-[640px]">{board}</div>
+          <div className="px-3">
+            <TeamBar color={bottom} compact />
+          </div>
+          {!!room?.spectators.length && (
+            <div className="flex justify-end px-3">
+              <Crowd />
             </div>
           )}
-          <GameActions />
-          <div role="tablist" aria-label="Game panels" className="mx-3 flex gap-1 rounded-lg bg-raised p-1">
-            {(setup ? (['setup', 'chat'] as Tab[]) : (['moves', 'chat'] as Tab[])).map((t) => (
-              <button
-                key={t}
-                role="tab"
-                type="button"
-                aria-selected={tab === t}
-                onClick={() => setTab(t)}
-                className={`relative h-10 flex-1 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-surface shadow-sm' : 'text-fg-muted'}`}
-              >
-                {t === 'setup' ? 'Room setup' : t}
-                {t === 'chat' && unread > 0 && (
-                  <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-fg">{unread}</span>
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="mx-3 mt-2 overflow-hidden rounded-xl border border-line bg-surface">
-            {tab === 'setup' && <RoomSetup />}
-            {tab === 'moves' && (
-              <div className="max-h-[320px] overflow-y-auto">
-                <MoveList />
+          <div className="mx-auto w-full max-w-[640px]">
+            {!setup && <MoveList horizontal />}
+            {(reviewBanner || offerNote) && (
+              <div className="space-y-2 px-3 py-1">
+                {reviewBanner}
+                {offerNote && <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium">{offerNote}</p>}
               </div>
             )}
-            {tab === 'chat' && (
-              <div className="flex h-[360px] flex-col">
-                <div className="flex justify-end px-3 pt-2 empty:hidden">
-                  <MuteSpectators />
+            <GameActions />
+            <div role="tablist" aria-label="Game panels" className="mx-3 flex gap-1 rounded-lg bg-raised p-1">
+              {(setup ? (['setup', 'chat'] as Tab[]) : (['moves', 'chat'] as Tab[])).map((t) => (
+                <button
+                  key={t}
+                  role="tab"
+                  type="button"
+                  aria-selected={tab === t}
+                  onClick={() => setTab(t)}
+                  className={`relative h-10 flex-1 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-surface shadow-sm' : 'text-fg-muted'}`}
+                >
+                  {t === 'setup' ? 'Room setup' : t}
+                  {t === 'chat' && unread > 0 && (
+                    <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-fg">{unread}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="mx-3 mt-2 overflow-hidden rounded-xl border border-line bg-surface">
+              {tab === 'setup' && <RoomSetup />}
+              {tab === 'moves' && (
+                <div className="max-h-[320px] overflow-y-auto">
+                  <MoveList />
                 </div>
-                <div className="min-h-0 flex-1">
-                  <RoomChat />
+              )}
+              {tab === 'chat' && (
+                <div className="flex h-[360px] flex-col">
+                  <div className="flex justify-end px-3 pt-2 empty:hidden">
+                    <MuteSpectators />
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    <RoomChat />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
       )}
     </>
   );

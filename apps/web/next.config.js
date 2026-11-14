@@ -5,7 +5,11 @@ const nextConfig = {
   transpilePackages: ['@relay-chess/game'],
   // accounts are gone; the old signed-in home is the landing page now
   async redirects() {
-    return [{ source: '/home', destination: '/', permanent: true }];
+    return [
+      { source: '/home', destination: '/', permanent: true },
+      // contact merged into the about page
+      { source: '/contact', destination: '/about#contact', permanent: true },
+    ];
   },
 };
 

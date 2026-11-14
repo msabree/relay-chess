@@ -9,7 +9,12 @@
         "config": [],
         "entry": ["__tests__/**/*.test.{ts,tsx}"]
       },
-      "ignoreDependencies": ["eslint", "eslint-config-next", "jest-environment-jsdom"]
+      "ignoreDependencies": ["jest-environment-jsdom"]
+    },
+    "apps/mobile": {
+      "entry": ["components/**/*.ios.tsx"],
+      "ignoreBinaries": ["eas"],
+      "ignoreDependencies": ["expo-updates"]
     }
   }
 }

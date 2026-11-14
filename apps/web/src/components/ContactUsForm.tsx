@@ -11,7 +11,8 @@ import { issueUrl } from '@/lib/github';
 const CheckCircle = dynamic(() => import('lucide-react').then(mod => mod.CheckCircle), { ssr: false });
 
 const EMPTY: ContactInput = { name: '', email: '', message: '' };
-const field = 'glass-effect border border-line bg-fg/5 text-fg placeholder:text-fg-muted focus:border-accent/50 focus:ring-accent/50';
+const field = 'border border-line bg-bg text-fg placeholder:text-fg-subtle focus-visible:ring-2 focus-visible:ring-accent/60';
+const label = 'mb-1.5 block text-sm font-medium';
 
 const ContactUsForm = () => {
   const [values, setValues] = useState<ContactInput>(EMPTY);
@@ -52,19 +53,13 @@ const ContactUsForm = () => {
 
   if (isSubmitted) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="p-4 rounded-full bg-accent/20">
-          <CheckCircle className="w-12 h-12 text-success" />
-        </div>
-        <p className="text-lg font-semibold text-fg">{"Message Sent!"}</p>
-        <p className="text-fg-muted text-center">{"We'll get back to you soon."}</p>
-        <Button
-          variant="ghost"
-          className="text-accent-ink hover:text-accent-ink hover:bg-fg/10 mt-4"
-          onClick={() => setIsSubmitted(false)}
-        >
-          {"Send another message"}
-        </Button>
+      <div role="status" className="flex flex-col items-start gap-3 py-6">
+        <CheckCircle className="h-8 w-8 text-success" />
+        <p className="text-lg font-semibold text-fg">Message sent</p>
+        <p className="text-fg-muted">Thanks for reaching out. We&apos;ll get back to you soon.</p>
+        <button type="button" className="text-sm font-medium underline underline-offset-4 hover:text-fg-muted" onClick={() => setIsSubmitted(false)}>
+          Send another message
+        </button>
       </div>
     );
   }
@@ -82,24 +77,12 @@ const ContactUsForm = () => {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-      <p className="text-fg-muted text-center text-sm mb-6">
-        {"Have a partnership inquiry, business question, or just want to reach out? We'd love to hear from you! "}
-        {"Found a bug or have an idea? "}
-        <a href={issueUrl('bug_report')} target="_blank" rel="noopener noreferrer" className="text-accent-ink underline underline-offset-4">
-          Report an issue
-        </a>
-        {" or "}
-        <a href={issueUrl('feature_request')} target="_blank" rel="noopener noreferrer" className="text-accent-ink underline underline-offset-4">
-          request a feature
-        </a>
-        {" on GitHub."}
-      </p>
 
       <div>
+        <label htmlFor="name" className={label}>Name</label>
         <Input
           id="name"
-          aria-label="Your Name"
-          placeholder="Your Name"
+          placeholder="Your name"
           value={values.name}
           onChange={set('name')}
           className={field}
@@ -110,11 +93,11 @@ const ContactUsForm = () => {
       </div>
 
       <div>
+        <label htmlFor="email" className={label}>Email</label>
         <Input
           id="email"
           type="email"
-          aria-label="Your Email"
-          placeholder="Your Email"
+          placeholder="you@example.com"
           value={values.email}
           onChange={set('email')}
           className={field}
@@ -125,13 +108,13 @@ const ContactUsForm = () => {
       </div>
 
       <div>
+        <label htmlFor="message" className={label}>Message</label>
         <Textarea
           id="message"
-          aria-label="Your Message"
-          placeholder="Your Message"
+          placeholder="What is on your mind?"
           value={values.message}
           onChange={set('message')}
-          className={`${field} min-h-[150px] resize-none`}
+          className={`${field} min-h-[160px] resize-y`}
           disabled={isSubmitting}
           {...a11y('message')}
         />
@@ -139,20 +122,29 @@ const ContactUsForm = () => {
       </div>
 
       {serverError && (
-        <p role="alert" className="text-center text-sm text-danger">
+        <p role="alert" className="text-sm text-danger">
           {serverError}
         </p>
       )}
 
-      <div className="flex justify-center pt-4">
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-accent hover:bg-accent/90 text-accent-fg font-semibold px-8 py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
-        >
-          {isSubmitting ? "Sending..." : "Send Message"}
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="h-12 w-full rounded-xl bg-accent text-base font-semibold text-accent-fg hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isSubmitting ? 'Sending...' : 'Send message'}
+      </Button>
+      <p className="text-sm text-fg-subtle">
+        Found a bug or have an idea?{' '}
+        <a href={issueUrl('bug_report')} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-fg">
+          Report an issue
+        </a>{' '}
+        or{' '}
+        <a href={issueUrl('feature_request')} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-fg">
+          request a feature
+        </a>{' '}
+        on GitHub.
+      </p>
     </form>
   );
 };

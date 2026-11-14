@@ -19,6 +19,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean }) => {
     { href: '/', label: 'Play' },
     { href: '/live-games', label: 'Watch' },
     { href: '/leaderboard', label: 'Leaderboard' },
+    { href: '/how-to-play', label: 'How to play' },
   ];
   const linkClass = (href: string) =>
     `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
