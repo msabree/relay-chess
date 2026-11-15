@@ -107,3 +107,31 @@ describe('misc', () => {
     expect((await t.api('/auth/exchange', { method: 'POST' })).status).toBe(404);
   });
 });
+
+describe('announcements', () => {
+  const hour = 3_600_000;
+
+  it('returns only live banners, in order, cleaned up', async () => {
+    const now = Date.now();
+    t.store.announcements.push(
+      { text: 'Deploy tonight at 12 AM ET. Games may reset.', tone: 'warning', active: true, order: 0 },
+      { text: "We're on Product Hunt", link: 'https://www.producthunt.com/posts/relay-chess', linkText: 'Upvote', active: true, order: 1 },
+      { text: 'turned off', active: false },
+      { text: 'not yet', active: true, startsAt: new Date(now + hour) },
+      { text: 'over', active: true, endsAt: new Date(now - hour) },
+      { text: 'bad link', link: 'javascript:alert(1)', active: true, order: 2 },
+      { text: '   ', active: true },
+    );
+    const r = await t.api('/announcements');
+    expect(r.status).toBe(200);
+    expect(r.body.announcements).toEqual([
+      { id: '0', text: 'Deploy tonight at 12 AM ET. Games may reset.', tone: 'warning' },
+      { id: '1', text: "We're on Product Hunt", link: 'https://www.producthunt.com/posts/relay-chess', linkText: 'Upvote', tone: 'info' },
+      { id: '5', text: 'bad link', tone: 'info' },
+    ]);
+  });
+
+  it('is empty by default', async () => {
+    expect((await t.api('/announcements')).body).toEqual({ announcements: [] });
+  });
+});

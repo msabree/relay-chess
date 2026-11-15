@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { toNodeHandler } from 'better-auth/node';
-import { contactSchema } from '@relay-chess/game';
+import { contactSchema, type Announcement } from '@relay-chess/game';
 import { createCaptcha } from './captcha';
 import { z } from 'zod';
 import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
@@ -17,6 +17,15 @@ declare global {
       who?: Identity;
     }
   }
+}
+
+/** Clean a hand-written banner document; drop it if it's unusable. */
+function toAnnouncement(d: { id: string; text?: unknown; link?: unknown; linkText?: unknown; tone?: unknown }): Announcement | null {
+  const text = typeof d.text === 'string' ? d.text.trim().slice(0, 200) : '';
+  if (!text) return null;
+  const link = typeof d.link === 'string' && /^https?:\/\//.test(d.link) ? d.link : undefined;
+  const linkText = link && typeof d.linkText === 'string' && d.linkText.trim() ? d.linkText.trim().slice(0, 40) : undefined;
+  return { id: d.id, text, ...(link ? { link, linkText: linkText ?? 'Learn more' } : {}), tone: d.tone === 'warning' ? 'warning' : 'info' };
 }
 
 const me = (who: Identity) => ({ id: who.id, username: who.name });
@@ -159,6 +168,20 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
   );
 
   app.get('/live-games', (_req, res) => res.json({ games: liveGames() }));
+
+  /** Site-wide banners. Edited straight in the database; cached briefly here. */
+  let banners: { at: number; list: Announcement[] } = { at: 0, list: [] };
+  app.get(
+    '/announcements',
+    wrap(async (_req, res) => {
+      if (Date.now() - banners.at > 15_000) {
+        const docs = await store.liveAnnouncements(new Date());
+        banners = { at: Date.now(), list: docs.map(toAnnouncement).filter((a): a is Announcement => !!a).slice(0, 3) };
+      }
+      res.set('Cache-Control', 'public, max-age=30');
+      res.json({ announcements: banners.list });
+    }),
+  );
 
   // ---- leaderboard (today / this week) ----
 

@@ -1,15 +1,18 @@
-import type { ContactMessage, GameRecord, Score, Store } from './types';
+import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store } from './types';
 
 /** Everything in process memory. Default for local dev and tests. */
-export function createMemoryStore(): Store & { contacts: ContactMessage[] } {
+export function createMemoryStore(): Store & { contacts: ContactMessage[]; announcements: AnnouncementDoc[] } {
   const games = new Map<string, GameRecord>();
   const scores = new Map<string, Score>();
   const contacts: ContactMessage[] = [];
+  /** none by default; tests (or a dev) can push some */
+  const announcements: AnnouncementDoc[] = [];
   const copy = <T>(v: T): T => structuredClone(v);
 
   return {
     kind: 'memory',
     contacts,
+    announcements,
     async saveGame(game) {
       if (!games.has(game.roomId)) games.set(game.roomId, copy(game));
     },
@@ -39,6 +42,12 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[] } {
     },
     async saveContact(msg) {
       contacts.push(copy(msg));
+    },
+    async liveAnnouncements(now) {
+      return announcements
+        .map((a, i) => ({ ...copy(a), id: String(i) }))
+        .filter((a) => a.active && (!a.startsAt || a.startsAt <= now) && (!a.endsAt || a.endsAt > now))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     },
     async close() {},
   };

@@ -52,6 +52,24 @@ export interface ContactMessage {
   sentAt: Date;
 }
 
+/**
+ * A banner document, as you'd write it in the `announcements` collection:
+ *   { text: "We're live on Product Hunt", link: "https://...", linkText: "Upvote us",
+ *     tone: "info", active: true, startsAt: ISODate(...), endsAt: ISODate(...), order: 0 }
+ * Only text and active are required. Live = active and inside startsAt/endsAt (when set).
+ */
+export interface AnnouncementDoc {
+  text: string;
+  link?: string;
+  linkText?: string;
+  tone?: 'info' | 'warning';
+  active: boolean;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+  /** lower shows first */
+  order?: number;
+}
+
 export interface Store {
   readonly kind: 'memory' | 'mongo';
   /** The Mongo database, when there is one. Accounts live in it too. */
@@ -69,5 +87,7 @@ export interface Store {
   listScores(period: Period, key: string): Promise<Score[]>;
 
   saveContact(msg: ContactMessage): Promise<void>;
+  /** Live banners right now, in order. */
+  liveAnnouncements(now: Date): Promise<(AnnouncementDoc & { id: string })[]>;
   close(): Promise<void>;
 }

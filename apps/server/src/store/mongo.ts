@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Document } from 'mongodb';
-import type { ContactMessage, GameRecord, Score, Store } from './types';
+import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store } from './types';
 
 const strip = <T extends Document>(d: T | null) => {
   if (!d) return null;
@@ -19,6 +19,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const games: Collection<GameRecord> = db.collection('recent_games');
   const scores: Collection<Score> = db.collection('scores');
   const contact: Collection<ContactMessage> = db.collection('contact-us');
+  const announcements: Collection<AnnouncementDoc> = db.collection('announcements');
 
   // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
   await games.dropIndex('timestamp_1').catch(() => {});
@@ -62,6 +63,20 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     },
     async saveContact(msg) {
       await contact.insertOne(msg);
+    },
+    async liveAnnouncements(now) {
+      const docs = await announcements
+        .find({
+          active: true,
+          $and: [
+            { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
+            { $or: [{ endsAt: { $exists: false } }, { endsAt: null }, { endsAt: { $gt: now } }] },
+          ],
+        })
+        .sort({ order: 1, _id: 1 })
+        .limit(5)
+        .toArray();
+      return docs.map(({ _id, ...d }) => ({ ...d, id: String(_id) }));
     },
     async close() {
       await client.close();
