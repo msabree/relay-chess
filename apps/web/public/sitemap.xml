@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://relaychess.com/</loc></url>
-  <url><loc>https://relaychess.com/leaderboard</loc></url>
-  <url><loc>https://relaychess.com/how-to-play</loc></url>
-  <url><loc>https://relaychess.com/live-games</loc></url>
-  <url><loc>https://relaychess.com/about</loc></url>
-  <url><loc>https://relaychess.com/privacy-policy</loc></url>
-  <url><loc>https://relaychess.com/terms-of-service</loc></url>
+  <url><loc>https://www.relaychess.com/</loc></url>
+  <url><loc>https://www.relaychess.com/leaderboard</loc></url>
+  <url><loc>https://www.relaychess.com/how-to-play</loc></url>
+  <url><loc>https://www.relaychess.com/live-games</loc></url>
+  <url><loc>https://www.relaychess.com/about</loc></url>
+  <url><loc>https://www.relaychess.com/privacy-policy</loc></url>
+  <url><loc>https://www.relaychess.com/terms-of-service</loc></url>
 </urlset>

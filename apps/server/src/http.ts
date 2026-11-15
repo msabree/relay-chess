@@ -2,6 +2,7 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { toNodeHandler } from 'better-auth/node';
 import { contactSchema } from '@relay-chess/game';
+import { createCaptcha } from './captcha';
 import { z } from 'zod';
 import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
 import type { Accounts } from './accounts';
@@ -191,12 +192,18 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
 
   // ---- contact ----
 
+  const captcha = createCaptcha(config.AUTH_SECRET);
+  app.get('/contact/challenge', (_req, res) => res.json(captcha.issue()));
+
   app.post(
     '/contact',
     wrap(async (req, res) => {
       if (!contactLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
+      // Hidden "website" field: people never see it, bots fill it in. Pretend it worked.
+      if (req.body?.website) return res.json({ ok: true });
       const body = contactSchema.safeParse(req.body);
       if (!body.success) return res.status(400).json({ error: 'invalid-input' });
+      if (!captcha.check(req.body?.captcha?.token, req.body?.captcha?.answer)) return res.status(400).json({ error: 'captcha' });
       await store.saveContact({ ...body.data, userId: req.who?.id, sentAt: new Date() });
       res.json({ ok: true });
     }),

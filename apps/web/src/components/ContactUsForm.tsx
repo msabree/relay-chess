@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { isAxiosError } from 'axios';
 import { contactErrors, type ContactErrors, type ContactInput } from '@relay-chess/game';
-import { contactUs } from '@/apis/auth';
+import { contactUs, getContactChallenge, type ContactChallenge } from '@/apis/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +21,17 @@ const ContactUsForm = () => {
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  // Quick human check: a signed "What is 7 + 5?" from the server, one try each.
+  const [challenge, setChallenge] = useState<ContactChallenge | null>(null);
+  const [answer, setAnswer] = useState('');
+  const [answerError, setAnswerError] = useState('');
+  const [website, setWebsite] = useState(''); // hidden from people; bots fill it in
+
+  const newChallenge = () => {
+    setAnswer('');
+    getContactChallenge().then(setChallenge, () => setChallenge(null));
+  };
+  useEffect(newChallenge, []);
 
   // After the first submit, re-validate as the user types so errors clear as they're fixed.
   const set = (key: keyof ContactInput) => (e: { target: { value: string } }) => {
@@ -35,17 +46,27 @@ const ContactUsForm = () => {
     setServerError('');
     const errs = contactErrors(values);
     setErrors(errs ?? {});
-    if (errs) return;
+    const missingAnswer = !answer.trim();
+    setAnswerError(missingAnswer ? 'Please answer the question.' : '');
+    if (errs || missingAnswer || !challenge) return;
 
     setIsSubmitting(true);
     try {
-      await contactUs(values.name.trim(), values.email.trim(), values.message.trim());
+      await contactUs(
+        { name: values.name.trim(), email: values.email.trim(), message: values.message.trim() },
+        { token: challenge.token, answer: answer.trim() },
+        website,
+      );
       setValues(EMPTY);
       setAttempted(false);
       setIsSubmitted(true);
+      newChallenge();
     } catch (err) {
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setServerError(status === 429 ? 'Too many messages. Please try again in an hour.' : 'Something went wrong. Please try again.');
+      const code = isAxiosError(err) ? (err.response?.data as { error?: string } | undefined)?.error : undefined;
+      if (code === 'captcha') setAnswerError("That's not quite right. Here's a new one.");
+      else setServerError(status === 429 ? 'Too many messages. Please try again in an hour.' : 'Something went wrong. Please try again.');
+      newChallenge(); // every question works once
     } finally {
       setIsSubmitting(false);
     }
@@ -119,6 +140,38 @@ const ContactUsForm = () => {
           {...a11y('message')}
         />
         {err('message')}
+      </div>
+
+      <div>
+        <label htmlFor="captcha" className={label}>
+          Quick check: {challenge ? challenge.question : 'loading…'}
+        </label>
+        <Input
+          id="captcha"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="Your answer"
+          value={answer}
+          onChange={(e) => {
+            setAnswer(e.target.value);
+            if (answerError) setAnswerError('');
+          }}
+          className={`${field} max-w-[160px]`}
+          disabled={isSubmitting || !challenge}
+          aria-invalid={!!answerError}
+          aria-describedby={answerError ? 'captcha-error' : undefined}
+        />
+        {answerError && (
+          <p id="captcha-error" role="alert" className="mt-1 text-sm text-danger">
+            {answerError}
+          </p>
+        )}
+      </div>
+
+      {/* Bots fill in every field; people never see this one. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="website">Website</label>
+        <input id="website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
       </div>
 
       {serverError && (

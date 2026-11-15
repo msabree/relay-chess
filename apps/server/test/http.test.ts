@@ -54,6 +54,30 @@ describe('analysis', () => {
   });
 });
 
+describe('contact captcha', () => {
+  const solve = (q: string) => String(q.match(/\d+/g)!.map(Number).reduce((a, b) => a + b));
+  const send = (captcha: unknown, extra: object = {}) =>
+    t.api('/contact', { method: 'POST', json: { name: 'Ann', email: 'a@b.co', message: 'The board froze after a move.', captcha, ...extra } });
+
+  it('a right answer goes through once; wrong answers and replays do not', async () => {
+    const c = (await t.api('/contact/challenge')).body as { token: string; question: string };
+    expect(c.question).toMatch(/^What is \d \+ \d\?$/);
+    expect((await send({ token: c.token, answer: ` ${solve(c.question)} ` })).body).toEqual({ ok: true });
+    expect((await send({ token: c.token, answer: solve(c.question) })).body).toEqual({ error: 'captcha' }); // replay
+    const d = (await t.api('/contact/challenge')).body as { token: string; question: string };
+    expect((await send({ token: d.token, answer: '99' })).body).toEqual({ error: 'captcha' });
+    expect((await send({ token: d.token, answer: solve(d.question) })).body).toEqual({ error: 'captcha' }); // one try per question
+    expect((await send({ token: d.token.replace(/.$/, 'x'), answer: solve(d.question) })).body).toEqual({ error: 'captcha' });
+    expect(t.store.contacts).toHaveLength(1);
+  });
+
+  it('a filled-in hidden field looks like success but saves nothing', async () => {
+    const c = (await t.api('/contact/challenge')).body as { token: string; question: string };
+    expect((await send({ token: c.token, answer: solve(c.question) }, { website: 'http://spam.example' })).body).toEqual({ ok: true });
+    expect(t.store.contacts).toHaveLength(0);
+  });
+});
+
 describe('stats', () => {
   it('counts games played', async () => {
     expect((await t.api('/stats')).body).toEqual({ gamesPlayed: 0 });
@@ -76,8 +100,8 @@ describe('misc', () => {
   it('health, contact, leaderboard', async () => {
     expect((await t.api('/health')).body).toEqual({ ok: true, store: 'memory', playing: 0 });
     expect((await t.api('/contact', { method: 'POST', json: { name: 'A', email: 'nope', message: 'hi' } })).status).toBe(400);
-    expect((await t.api('/contact', { method: 'POST', json: { name: 'A', email: 'a@b.co', message: 'hi' } })).body).toEqual({ ok: true });
-    expect(t.store.contacts).toHaveLength(1);
+    expect((await t.api('/contact', { method: 'POST', json: { name: 'A', email: 'a@b.co', message: 'The board froze.' } })).body).toEqual({ error: 'captcha' });
+    expect(t.store.contacts).toHaveLength(0);
     expect((await t.api('/leaderboard?period=weekly')).body).toMatchObject({ rows: [], total: 0 });
     expect((await t.api('/leaderboard?period=all-time')).status).toBe(400);
     expect((await t.api('/auth/exchange', { method: 'POST' })).status).toBe(404);
