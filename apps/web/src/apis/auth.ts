@@ -8,4 +8,12 @@ export const renamePlayer = async (username: string) => {
   return res.data.user;
 };
 
-export const contactUs = (name: string, email: string, message: string) => api.post('/contact', { name, email, message });
+export type ContactChallenge = { token: string; question: string };
+export const getContactChallenge = () => api.get<ContactChallenge>('/contact/challenge').then((r) => r.data);
+
+/** `website` is the hidden field only bots fill in; people always send ''. */
+export const contactUs = (
+  fields: { name: string; email: string; message: string },
+  captcha: { token: string; answer: string },
+  website: string,
+) => api.post('/contact', { ...fields, captcha, website });

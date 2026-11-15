@@ -4,4 +4,4 @@ Allow: /api/og/
 Disallow: /api/
 Disallow: /404
 
-Sitemap: https://relaychess.com/sitemap.xml
+Sitemap: https://www.relaychess.com/sitemap.xml
