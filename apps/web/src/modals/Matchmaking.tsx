@@ -99,7 +99,7 @@ export default function Matchmaking({ open, onClose, selectedTimer, isNewGame }:
                     <p className="text-sm text-fg">
                       {othersReady > 0
                         ? `${othersReady === 1 ? 'Someone is' : `${othersReady} players are`} ready to play a 1v1 now.`
-                        : 'Don\'t want to wait? Start a 1v1 with the next player who\'s up for it.'}
+                        : "Don't want to wait? Start a 1v1 with the next player who's up for it."}
                     </p>
                     <button
                       type="button"

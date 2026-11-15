@@ -19,12 +19,12 @@ const CompactTimerSelection = ({ selectedTimer, onTimerChange, options = TIMER_O
     <div className='space-y-2'>
       <Select value={selectedTimer} onValueChange={onTimerChange}>
         <SelectTrigger className='w-full glass-effect border border-line text-fg focus:border-accent/50 focus:ring-accent/50 hover:border-accent/30 transition-colors'>
-          <SelectValue placeholder={"Select time control"} />
+          <SelectValue placeholder={'Select time control'} />
         </SelectTrigger>
         <SelectContent className='glass-effect border border-line backdrop-blur-xl'>
           {options.map((option) => {
             const queueCount = getQueueCount(option.time);
-            const label = getTimerLabel(option.time, "No Timer");
+            const label = getTimerLabel(option.time, 'No Timer');
             return (
               <SelectItem 
                 key={option.time} 

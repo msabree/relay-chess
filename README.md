@@ -18,6 +18,7 @@ Play it at [relaychess.com](https://relaychess.com).
 
 ```
 apps/web        Next.js web app
+apps/mobile     iOS app (Expo)
 apps/server     HTTP API + socket.io on one port (Express, MongoDB or in-memory)
 packages/game   Rules engine and wire protocol: seats, relay rotation, move validation, clocks, results
 ```
@@ -39,6 +40,8 @@ pnpm dev                                        # server on :4000, web on :3000
 Open http://localhost:3000 in two browsers (or one normal + one private window) and you're two different players. No keys or database needed.
 
 To keep data between restarts, run `docker compose up -d` and set `MONGODB_URL=mongodb://localhost:27017` in `apps/server/.env`.
+
+To run the iOS app against staging: `pnpm --filter @relay-chess/mobile start`, then open it in Expo Go. Point it at your local server with `EXPO_PUBLIC_SERVER_URL=http://<your-ip>:4000`.
 
 Tests: `pnpm test` (rules engine + server integration tests). Typecheck: `pnpm typecheck`.
 

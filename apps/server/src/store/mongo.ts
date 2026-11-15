@@ -32,6 +32,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
 
   return {
     kind: 'mongo',
+    db,
     async saveGame(game) {
       await games.updateOne({ roomId: game.roomId }, { $setOnInsert: game }, { upsert: true });
     },

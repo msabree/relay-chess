@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import ClientPage from './ClientPage';
+import ClientPage from '@/components/game/GamePage';
 import { OG_IMAGE } from '@/constants';
 
 const TITLE = 'Join my 2v2 chess game · Relay Chess';
@@ -9,8 +9,8 @@ export default function ServerSidePage() {
   return (
     <>
       <Head>
-        <title>{"Game - Relay Chess"}</title>
-        <meta name="description" content={"Play or watch a live 2v2 team chess game on Relay Chess."} />
+        <title>{'Game - Relay Chess'}</title>
+        <meta name="description" content={'Play or watch a live 2v2 team chess game on Relay Chess.'} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Relay Chess" />
         <meta property="og:title" content={TITLE} />

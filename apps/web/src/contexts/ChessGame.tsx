@@ -60,19 +60,19 @@ interface ChessGameContextProps {
   sendChatMessage: (message: string) => void;
   movePiece: (move: { from: string; to: string; promotion?: string }) => Move | null;
   resignGame: () => void;
-  // eslint-disable-next-line no-unused-vars
+   
   autoResignGame: (teamColor: TEAM_COLOR, userId: string, username: string) => void;
   abortGame: () => void;
   offerDraw: () => void;
   setMoveHistoryFen: (fen: string) => void;
-  // eslint-disable-next-line no-unused-vars
+   
   changeTeam: (team: 'w' | 'b' | 'spectator') => void;
   offerRematch: () => void;
-  // eslint-disable-next-line no-unused-vars
+   
   updateTimer: (timer: string) => void;
-  // eslint-disable-next-line no-unused-vars
+   
   setWatchable: (watchable: boolean) => void;
-  // eslint-disable-next-line no-unused-vars
+   
   setSpectatorsMuted: (muted: boolean) => void;
 }
 
@@ -321,6 +321,8 @@ export const ChessGameProvider = ({ children, isLoggedIn = false, roomId }: Ches
     changeTeam: (t) => void room.changeTeam(t).then(fail('Could not switch sides')),
     offerRematch: () =>
       void room.rematch().then((res) => {
+        // A full load on purpose: the new room starts from a clean socket and state.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         if (res.ok) window.location.href = `/games/${res.roomId}`;
         else fail('Rematch failed')(res);
       }),

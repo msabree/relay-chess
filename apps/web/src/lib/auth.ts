@@ -1,16 +1,22 @@
 import { SERVER_URL } from '@/constants';
 
 /**
- * Your player identity. There are no accounts: the server hands out a random
- * id and nickname, and the browser keeps the token for 30 days.
+ * Your player identity. Everyone starts as a guest: the server hands out a
+ * random id and nickname, and the browser keeps the token for 30 days.
+ * Signing in with an email code adds an account session, which keeps your id
+ * and reserves your name; the game itself still runs on the player token.
  */
 export interface Me {
   id: string;
   username: string;
+  /** set when signed in */
+  email?: string;
 }
 interface Stored {
   token: string;
   user: Me;
+  /** account session (Better Auth), when signed in */
+  session?: string;
 }
 
 const KEY = 'relaychess.player';
@@ -49,26 +55,86 @@ const expired = (token: string) => {
   }
 };
 
+const post = (path: string, body: unknown, bearer?: string) =>
+  fetch(`${SERVER_URL}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) },
+    body: JSON.stringify(body),
+  });
+
+/** Swap an account session for a player token. Null if the session is gone. */
+async function accountPlayer(session: string, guestToken?: string): Promise<Stored | null> {
+  const res = await post('/account/session', { guestToken }, session);
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error(`could not load your account (${res.status})`);
+  const { token, user } = (await res.json()) as Omit<Stored, 'session'>;
+  return { token, user, session };
+}
+
 /** Make sure we hold a valid player token, asking the server for one if needed. */
 export async function ensurePlayer(): Promise<Stored> {
   const current = read();
   if (current && !expired(current.token)) return current;
   if (inflight) return inflight;
-  inflight = fetch(`${SERVER_URL}/players`, { method: 'POST' })
-    .then(async (res) => {
-      if (!res.ok) throw new Error(`could not start a player session (${res.status})`);
-      const s = (await res.json()) as Stored;
-      write(s);
-      return s;
-    })
-    .finally(() => (inflight = null));
+  inflight = (async () => {
+    // Signed in: renew from the account, so you stay the same player.
+    const renewed = current?.session ? await accountPlayer(current.session) : null;
+    if (renewed) return (write(renewed), renewed);
+    const res = await fetch(`${SERVER_URL}/players`, { method: 'POST' });
+    if (!res.ok) throw new Error(`could not start a player session (${res.status})`);
+    const s = (await res.json()) as Stored;
+    write(s);
+    return s;
+  })().finally(() => (inflight = null));
   return inflight;
+}
+
+/**
+ * Email a sign-in code (the email also has a link to /signin).
+ * @public used by AccountSection, which is parked for now
+ */
+export async function sendSignInCode(email: string) {
+  const res = await post('/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' });
+  if (!res.ok) throw new Error(res.status === 429 ? 'rate-limited' : 'send-failed');
+}
+
+/**
+ * Sign in with the emailed code. The first time, the account takes over the
+ * guest you've been playing as (same id, name and scores).
+ */
+export async function signInWithCode(email: string, code: string): Promise<Me> {
+  const res = await post('/api/auth/sign-in/email-otp', { email, otp: code });
+  const session = res.headers.get('set-auth-token');
+  if (!res.ok || !session) throw new Error(res.status === 429 ? 'rate-limited' : 'bad-code');
+  const s = await accountPlayer(session, read()?.token);
+  if (!s) throw new Error('bad-code');
+  write(s);
+  return s.user;
+}
+
+/**
+ * Sign out and continue as a new guest.
+ * @public used by AccountSection, which is parked for now
+ */
+export async function signOut() {
+  const session = read()?.session;
+  if (session) await post('/api/auth/sign-out', {}, session).catch(() => {});
+  cache = null;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* storage disabled */
+  }
+  await ensurePlayer();
 }
 
 export const getToken = () => read()?.token ?? null;
 
 /** After a rename the server returns a fresh token with the new name. */
-export const setPlayer = (token: string, user: Me) => write({ token, user });
+export const setPlayer = (token: string, user: Me) => {
+  const cur = read();
+  write({ ...cur, token, user: { ...cur?.user, ...user } });
+};
 
 /** Called when the token changes (new player, rename). */
 export function onAuthChange(fn: () => void) {

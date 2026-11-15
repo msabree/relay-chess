@@ -1,29 +1,33 @@
 import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
+import { isAxiosError } from 'axios';
 import { renamePlayer } from '@/apis/auth';
+// Sign in is parked for now. Uncomment this and <AccountSection /> below to bring it back.
+// import AccountSection from '@/components/AccountSection';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { setBoardColor, useBoardColor } from '@/lib/settings';
 
 const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
 const LABELS: Record<string, string> = { slate: 'Slate', 'blue-white': 'Blue', 'green-white': 'Green', 'red-white': 'Red' };
 
-/** Settings: your nickname and board colors. Everything lives on this device. */
+/** Settings: sign in, your nickname and board colors. */
 const SettingsDrawer = () => {
   const { rightDrawerOpen: open, setRightDrawerOpen: setOpen } = useContext(AppContext);
   const user = useUser();
   const board = useBoardColor();
   const [name, setName] = useState('');
-  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'taken'>('idle');
 
-  // Fill the field each time the drawer opens (not when a save updates the name).
+  // Fill the field when the drawer opens or you become a different player
+  // (sign in/out), not when a save updates the name.
   useEffect(() => {
     if (open) {
       setName(user.data?.username ?? '');
       setState('idle');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, user.data?._id]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,8 +46,8 @@ const SettingsDrawer = () => {
     try {
       await renamePlayer(clean);
       setState('saved');
-    } catch {
-      setState('error');
+    } catch (e) {
+      setState(isAxiosError(e) && e.response?.status === 409 ? 'taken' : 'error');
     }
   };
 
@@ -66,6 +70,8 @@ const SettingsDrawer = () => {
         </div>
 
         <div className="flex-1 space-y-8 overflow-y-auto p-5">
+          {/* <AccountSection /> */}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -73,7 +79,9 @@ const SettingsDrawer = () => {
             }}
           >
             <label htmlFor="nickname" className="text-sm font-semibold">Your name</label>
-            <p className="mt-1 text-sm text-fg-muted">What other players see. No account needed; this browser remembers you.</p>
+            <p className="mt-1 text-sm text-fg-muted">
+              {user.data?.email ? 'What other players see. Reserved for you.' : 'What other players see. This browser remembers you.'}
+            </p>
             <div className="mt-3 flex gap-2">
               <input
                 id="nickname"
@@ -94,10 +102,12 @@ const SettingsDrawer = () => {
                 {state === 'saving' ? 'Saving' : 'Save'}
               </button>
             </div>
-            <p id="nickname-help" className={`mt-2 text-xs ${state === 'error' || (!valid && name) ? 'text-danger' : 'text-fg-subtle'}`} aria-live="polite">
+            <p id="nickname-help" className={`mt-2 text-xs ${state === 'error' || state === 'taken' || (!valid && name) ? 'text-danger' : 'text-fg-subtle'}`} aria-live="polite">
               {state === 'saved'
                 ? 'Saved. New games will use this name.'
-                : state === 'error'
+                : state === 'taken'
+                  ? 'Another player has that name. Try another.'
+                  : state === 'error'
                   ? "Couldn't save that. Try again."
                   : !valid && name
                     ? '2 to 20 letters, numbers, spaces, _ or -.'

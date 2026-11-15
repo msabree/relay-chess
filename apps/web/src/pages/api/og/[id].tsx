@@ -1,11 +1,10 @@
 import { ImageResponse } from 'next/og';
-import type { NextRequest } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { SERVER_URL } from '@/constants';
 import { describeResult } from '@/lib/result';
 import { PIECE_SVGS } from '@/lib/pieceSvgs';
 
-/** Share preview for a finished game: final position, teams and result. 1200x630. */
-export const config = { runtime: 'edge' };
+/** Share preview for a finished game: final position, teams and result. 1200x630. Node runtime. */
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 const DARK = '#7E95A3';
@@ -22,7 +21,7 @@ type Record = {
 };
 
 const pieceSrc = (code: string) =>
-  `data:image/svg+xml;base64,${btoa(PIECE_SVGS[code]!.replace('width="100%" height="100%"', `width="${SQ}" height="${SQ}"`))}`;
+  `data:image/svg+xml;base64,${Buffer.from(PIECE_SVGS[code]!.replace('width="100%" height="100%"', `width="${SQ}" height="${SQ}"`)).toString('base64')}`;
 
 /** 8 rows of 8: piece code like "wK" or null. */
 function parseBoard(fen: string): (string | null)[][] {
@@ -48,9 +47,8 @@ async function loadGame(id: string): Promise<Record | null> {
   }
 }
 
-export default async function handler(req: NextRequest) {
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id') ?? url.pathname.split('/').pop() ?? '';
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const id = typeof req.query.id === 'string' ? req.query.id : '';
   const game = id ? await loadGame(id) : null;
 
   const winner = game?.winningColor === 'white' ? 'w' : game?.winningColor === 'black' ? 'b' : null;
@@ -82,6 +80,7 @@ export default async function handler(req: NextRequest) {
                   key={c}
                   style={{ width: SQ, height: SQ, display: 'flex', background: (r + c) % 2 ? DARK : LIGHT }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG by next/og, not a page */}
                   {p ? <img src={pieceSrc(p)} width={SQ} height={SQ} alt="" /> : null}
                 </div>
               ))}
@@ -109,6 +108,7 @@ export default async function handler(req: NextRequest) {
   );
 
   // Finished games never change. Missing ones might just not be saved yet.
-  image.headers.set('Cache-Control', game ? 'public, max-age=86400, s-maxage=31536000, immutable' : 'public, max-age=60');
-  return image;
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', game ? 'public, max-age=86400, s-maxage=31536000, immutable' : 'public, max-age=60');
+  res.status(200).send(Buffer.from(await image.arrayBuffer()));
 }

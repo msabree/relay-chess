@@ -188,6 +188,22 @@ describe('private rooms', () => {
     expect(rematch.game.teams.w.map((p) => p.id)).toEqual(end.game.teams.b.map((p) => p.id));
   });
 
+  it('spectators stay spectators in a rematch', async () => {
+    const ps = await Promise.all([1, 2].map(() => t.player()));
+    const room = await privateRoom(ps);
+    await play(ps, room.id, FOOLS_MATE);
+    const watcher = await t.player();
+    await watcher.socket.emitWithAck('room:join', { roomId: room.id });
+    const r = await ps[0]!.socket.emitWithAck('game:rematch', { roomId: room.id });
+    if (!r.ok) throw new Error('rematch failed');
+    const joined = await watcher.socket.emitWithAck('room:join', { roomId: r.roomId });
+    if (!joined.ok) throw new Error(joined.error);
+    const seated = [...joined.room.game.teams.w, ...joined.room.game.teams.b].map((p) => p.id);
+    expect(seated).not.toContain(watcher.user.id);
+    expect(seated).toHaveLength(2);
+    expect(t.server.rooms.get(r.roomId)!.spectators.has(watcher.user.id)).toBe(true);
+  });
+
   it('a team that leaves mid-game forfeits', async () => {
     const ps = await Promise.all([1, 2].map(() => t.player()));
     const room = await privateRoom(ps);

@@ -8,8 +8,8 @@ export default function LiveGamesPage() {
   return (
     <>
       <Head>
-        <title>{"Live Games - Relay Chess"}</title>
-        <meta name="description" content={"Watch live 2v2 chess games in progress. Learn from top players and follow exciting team chess matches."} />
+        <title>{'Live Games - Relay Chess'}</title>
+        <meta name="description" content={'Watch live 2v2 chess games in progress. Learn from top players and follow exciting team chess matches.'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <NavigationBar />

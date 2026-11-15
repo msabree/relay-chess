@@ -54,6 +54,8 @@ export interface Room {
   spectators: Map<string, Spectator>;
   chat: ChatMessage[];
   rematchRoomId: string | null;
+  /** created by a rematch: seats are the old players, newcomers arrive as spectators */
+  isRematch: boolean;
   /** ids of guest players: they never go on the leaderboard */
   guests: Set<string>;
   /** open sockets per user currently in the room */
@@ -120,7 +122,7 @@ export class RoomService {
     return this.rooms.size;
   }
 
-  create(opts: { isPrivate: boolean; watchable?: boolean; spectatorsMuted?: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
+  create(opts: { isPrivate: boolean; isRematch?: boolean; watchable?: boolean; spectatorsMuted?: boolean; timeControl: TimeControl | null; teams?: Partial<Record<Color, Identity[]>> }): Room {
     const id = randomBytes(8).toString('base64url');
     const room: Room = {
       id,
@@ -132,6 +134,7 @@ export class RoomService {
       spectators: new Map(),
       chat: [],
       rematchRoomId: null,
+      isRematch: opts.isRematch ?? false,
       guests: new Set([...(opts.teams?.w ?? []), ...(opts.teams?.b ?? [])].filter((p) => p.guest).map((p) => p.id)),
       presence: new Map(),
       lastActivity: this.now(),
@@ -193,7 +196,7 @@ export class RoomService {
 
   // ---- presence ----
 
-  /** A socket opened the room. Seats you in a private lobby if there's space. */
+  /** A socket opened the room. Seats you in a private lobby if there's space (not in a rematch: spectators stay spectators). */
   join(roomId: string, who: Identity): RoomResult {
     const room = this.rooms.get(roomId);
     if (!room) return fail('room-not-found');
@@ -204,7 +207,7 @@ export class RoomService {
     let watching = false;
     if (colorOf(g, who.id)) {
       room.game = setConnected(g, who.id, true);
-    } else if (room.isPrivate && g.status === 'waiting' && g.teams.w.length + g.teams.b.length < MAX_PLAYERS) {
+    } else if (room.isPrivate && !room.isRematch && g.status === 'waiting' && g.teams.w.length + g.teams.b.length < MAX_PLAYERS) {
       const w = g.teams.w.length;
       const b = g.teams.b.length;
       const team: Color = w < b ? 'w' : b < w ? 'b' : Math.random() < 0.5 ? 'w' : 'b';
@@ -324,6 +327,7 @@ export class RoomService {
     const asIdentity = (p: { id: string; name: string }) => ({ id: p.id, name: p.name, guest: room.guests.has(p.id) });
     const next = this.create({
       isPrivate: room.isPrivate,
+      isRematch: true,
       watchable: room.watchable,
       spectatorsMuted: room.spectatorsMuted,
       timeControl: room.game.timeControl,

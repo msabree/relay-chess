@@ -54,6 +54,8 @@ export interface ContactMessage {
 
 export interface Store {
   readonly kind: 'memory' | 'mongo';
+  /** The Mongo database, when there is one. Accounts live in it too. */
+  readonly db?: import('mongodb').Db;
 
   saveGame(game: GameRecord): Promise<void>;
   getGame(roomId: string): Promise<GameRecord | null>;
