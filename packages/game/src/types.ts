@@ -4,7 +4,12 @@ export interface Player {
   id: string;
   name: string;
   connected: boolean;
+  /** signed in with an account (grey check) */
+  verified?: true;
 }
+
+/** Who is taking a seat. */
+export type Seatee = { id: string; name: string; verified?: true };
 
 export interface TimeControl {
   initialMs: number;

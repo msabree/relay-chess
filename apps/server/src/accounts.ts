@@ -1,3 +1,4 @@
+import { toUsername, USERNAME } from '@relay-chess/game';
 import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
@@ -108,19 +109,43 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     return adapter.findOne<AccountUser>({ model: 'user', where: [{ field: 'playerId', value: playerId }] });
   }
 
+  /**
+   * Accounts that own any of these player ids, as their main player or a
+   * guest they linked by signing in on another device. "contains" works on
+   * array fields in both the Mongo and memory adapters; it can match a
+   * substring in Mongo, so membership is checked again here.
+   */
+  async function ownersOf(playerIds: string[]): Promise<Map<string, AccountUser>> {
+    const out = new Map<string, AccountUser>();
+    if (!playerIds.length) return out;
+    const { adapter } = await ctx();
+    const users = await adapter.findMany<AccountUser>({
+      model: 'user',
+      where: [
+        { field: 'playerId', operator: 'in', value: playerIds, connector: 'OR' },
+        ...playerIds.map((id) => ({ field: 'linkedPlayerIds', operator: 'contains' as const, value: id, connector: 'OR' as const })),
+      ],
+    });
+    for (const u of users) {
+      for (const id of [u.playerId, ...(u.linkedPlayerIds ?? [])]) if (id && playerIds.includes(id)) out.set(id, u);
+    }
+    return out;
+  }
+
   async function update(userId: string, data: Partial<Omit<AccountUser, 'id'>> & { usernameKey?: string }) {
     const { internalAdapter } = await ctx();
     await internalAdapter.updateUser(userId, data);
   }
 
   /** A free name based on `base`: "Quiet Rook", else "Quiet Rook 2", "Quiet Rook 3"… */
-  async function freeName(base: string): Promise<string> {
+  async function freeName(raw: string): Promise<string> {
+    const base = toUsername(raw);
     if (!(await findByName(base))) return base;
     for (let n = 2; n < 1000; n++) {
-      const name = `${base.slice(0, 20 - String(n).length - 1)} ${n}`;
+      const name = `${base.slice(0, 20 - String(n).length)}${n}`;
       if (!(await findByName(name))) return name;
     }
-    return newGuest().name;
+    return (toUsername(newGuest().name).slice(0, 16) + Date.now().toString(36).slice(-4));
   }
 
   return {
@@ -162,21 +187,16 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
 
     /** Every player id whose games belong to this player (theirs plus linked guests). */
     async playerIds(playerId: string): Promise<{ ids: string[]; account: AccountUser | null }> {
-      const account = await findByPlayer(playerId);
-      return { ids: [playerId, ...(account?.linkedPlayerIds ?? [])], account };
+      const account = (await ownersOf([playerId])).get(playerId) ?? null;
+      if (!account?.playerId) return { ids: [playerId], account: null };
+      return { ids: [account.playerId, ...(account.linkedPlayerIds ?? [])], account };
     },
 
     /** Public account info (check mark, tagline, link) for these players. */
     async publicInfo(playerIds: string[]): Promise<Map<string, Socials & { username?: string }>> {
       const out = new Map<string, Socials & { username?: string }>();
-      if (!playerIds.length) return out;
-      const { adapter } = await ctx();
-      const users = await adapter.findMany<AccountUser>({
-        model: 'user',
-        where: [{ field: 'playerId', operator: 'in', value: playerIds }],
-      });
-      for (const u of users) {
-        if (u.playerId) out.set(u.playerId, { ...socials(u), ...(u.username ? { username: u.username } : {}) });
+      for (const [id, u] of await ownersOf(playerIds)) {
+        out.set(id, { ...socials(u), ...(u.username ? { username: u.username } : {}) });
       }
       return out;
     },
@@ -186,8 +206,8 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
       if (owner) await update(owner.id, p);
     },
 
-    /** Has this account chosen its username yet? (New accounts must.) */
-    needsName: (user: AccountUser) => !user.namePicked,
+    /** Has this account chosen a valid username yet? New accounts, and older ones with spaces in their name, must. */
+    needsName: (user: AccountUser) => !user.namePicked || !USERNAME.test(user.username ?? ''),
 
     /** Keep an account's reserved name in step with a rename. */
     async rename(playerId: string, name: string) {

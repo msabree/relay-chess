@@ -11,11 +11,13 @@ export interface ChatMessage {
   name: string;
   text: string;
   at: number;
+  verified?: true;
 }
 
 export interface Spectator {
   id: string;
   name: string;
+  verified?: true;
 }
 
 export interface RoomSnapshot {

@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { toNodeHandler } from 'better-auth/node';
-import { contactSchema, type Announcement } from '@relay-chess/game';
+import { contactSchema, USERNAME, type Announcement } from '@relay-chess/game';
 import { createCaptcha } from './captcha';
 import { z } from 'zod';
 import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAccessToken, type Identity } from './auth';
@@ -130,7 +130,8 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
     wrap(async (req, res) => {
       const body = z.object({ username: z.string().max(40) }).strict().safeParse(req.body);
       const name = body.success ? cleanNickname(body.data.username) : '';
-      if (!NICKNAME.test(name)) return res.status(400).json({ error: 'invalid-name' });
+      // guests keep friendly nicknames; account usernames follow the stricter rule
+      if (!(req.who!.guest ? NICKNAME : USERNAME).test(name)) return res.status(400).json({ error: 'invalid-name' });
       if (await accounts.nameTaken(name, req.who!.id)) return res.status(409).json({ error: 'name-taken' });
       if (!req.who!.guest) await accounts.rename(req.who!.id, name);
       const who: Identity = { ...req.who!, name };
@@ -229,7 +230,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
       const info = await accounts.publicInfo([...partners.keys()]);
       res.json({
         player: {
-          id,
+          id: account?.playerId ?? id,
           username: name,
           ...(account ? { verified: true } : {}),
           ...(account?.x ? { x: account.x } : {}),
@@ -275,8 +276,8 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
   app.get(
     '/names/available',
     wrap(async (req, res) => {
-      const name = cleanNickname(String(req.query.name ?? '').slice(0, 40));
-      if (!NICKNAME.test(name)) return res.json({ available: false, reason: 'invalid' });
+      const name = String(req.query.name ?? '').trim().slice(0, 40);
+      if (!USERNAME.test(name)) return res.json({ available: false, reason: 'invalid' });
       const taken = await accounts.nameTaken(name, req.who?.id ?? '');
       res.json(taken ? { available: false, reason: 'taken' } : { available: true });
     }),

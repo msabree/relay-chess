@@ -5,6 +5,7 @@ import { isAxiosError } from 'axios';
 import { renamePlayer } from '@/apis/auth';
 import AccountSection from '@/components/AccountSection';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
+import { USERNAME, USERNAME_HINT } from '@relay-chess/game';
 import { setBoardColor, useBoardColor } from '@/lib/settings';
 
 const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
@@ -36,8 +37,10 @@ const SettingsDrawer = () => {
   }, [open, setOpen]);
 
   if (!open) return null;
-  const clean = name.trim().replace(/\s+/g, ' ');
-  const valid = NICKNAME.test(clean);
+  // signed-in usernames follow the stricter rule; guest nicknames can have spaces
+  const signedIn = !!user.data?.verified;
+  const clean = signedIn ? name.trim() : name.trim().replace(/\s+/g, ' ');
+  const valid = (signedIn ? USERNAME : NICKNAME).test(clean);
 
   const save = async () => {
     if (!valid || clean === user.data?.username) return;
@@ -109,7 +112,9 @@ const SettingsDrawer = () => {
                   : state === 'error'
                   ? "Couldn't save that. Try again."
                   : !valid && name
-                    ? '2 to 20 letters, numbers, spaces, _ or -.'
+                    ? signedIn
+                      ? USERNAME_HINT
+                      : '2 to 20 letters, numbers, spaces, _ or -.'
                     : '2 to 20 characters.'}
             </p>
           </form>

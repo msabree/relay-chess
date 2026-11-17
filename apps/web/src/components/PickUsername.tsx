@@ -4,8 +4,9 @@ import { isAxiosError } from 'axios';
 import { checkName, renamePlayer } from '@/apis/auth';
 import { useUser } from '@/hooks/useUser';
 
-const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
-const clean = (v: string) => v.trim().replace(/\s+/g, ' ');
+import { USERNAME, USERNAME_HINT } from '@relay-chess/game';
+
+const clean = (v: string) => v.trim();
 
 type Check = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
@@ -29,7 +30,7 @@ const PickUsername = () => {
   useEffect(() => {
     if (!open) return;
     const n = clean(name);
-    if (!NICKNAME.test(n)) return setCheck(n ? 'invalid' : 'idle');
+    if (!USERNAME.test(n)) return setCheck(n ? 'invalid' : 'idle');
     setCheck('checking');
     const t = setTimeout(() => {
       checkName(n).then(
@@ -44,11 +45,11 @@ const PickUsername = () => {
   const ready = check === 'available';
 
   const hint: Record<Check, { text: string; tone: string }> = {
-    idle: { text: '2 to 20 letters, numbers, spaces, _ or -.', tone: 'text-fg-subtle' },
+    idle: { text: USERNAME_HINT, tone: 'text-fg-subtle' },
     checking: { text: 'Checking…', tone: 'text-fg-subtle' },
     available: { text: `${n} is yours if you want it.`, tone: 'text-success' },
     taken: { text: 'Someone already has that name. Try another.', tone: 'text-danger' },
-    invalid: { text: '2 to 20 letters, numbers, spaces, _ or -.', tone: 'text-danger' },
+    invalid: { text: USERNAME_HINT, tone: 'text-danger' },
   };
 
   return (

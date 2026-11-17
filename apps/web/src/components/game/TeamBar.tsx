@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { nextMover, type Color } from '@relay-chess/game';
 import { ChessGameContext } from '@/contexts/ChessGame';
 import { colorName, formatClock, initials, relayOrder, sideToMove } from './util';
+import PlayerCheck from '@/components/PlayerCheck';
 
 /**
  * One side of the board: relay order as chips, a status line, and the clock.
@@ -74,6 +75,7 @@ const TeamBar = ({ color, compact = false }: { color: Color; compact?: boolean }
                     {initials(p.name)}
                   </span>
                   <span className={compact && i > 0 ? 'sr-only' : 'truncate'}>{isMe ? 'You' : p.name}</span>
+                  {p.verified && !(compact && i > 0) && <PlayerCheck id={p.id} name={p.name} size={11} />}
                   {tag && <span className="hidden text-[10px] uppercase tracking-wider opacity-70 sm:inline">{tag}</span>}
                   {!p.connected && <span className="text-[10px] uppercase tracking-wider opacity-70">away</span>}
                 </span>

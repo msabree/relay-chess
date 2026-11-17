@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { ChessGameContext } from '@/contexts/ChessGame';
+import PlayerCheck from '@/components/PlayerCheck';
 
 /** Room chat. Everyone in the room, including the other team, can read it. */
 const RoomChat = () => {
@@ -30,8 +31,9 @@ const RoomChat = () => {
                 aria-hidden="true"
                 className={`h-2 w-2 shrink-0 rounded-[2px] ${side === 'w' ? 'bg-white ring-1 ring-ink-300' : side === 'b' ? 'bg-ink-950 ring-1 ring-ink-500' : 'bg-fg-subtle'}`}
               />
-              <span className={`shrink-0 font-semibold ${m.userId === userId ? 'text-accent-ink' : ''}`}>
+              <span className={`inline-flex shrink-0 items-center gap-1 self-center font-semibold ${m.userId === userId ? 'text-accent-ink' : ''}`}>
                 {m.userId === userId ? 'You' : m.name}
+                {m.verified && m.userId !== userId && <PlayerCheck id={m.userId} name={m.name} size={11} />}
               </span>
               <span className="min-w-0 break-words text-fg-muted">{m.text}</span>
             </li>
