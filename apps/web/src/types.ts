@@ -40,6 +40,8 @@ export interface LeaderboardRow {
     losses: number;
     draws: number;
     gamesPlayed: number;
+    /** signed-in player: grey check */
+    verified?: boolean;
 }
 
 export interface Leaderboard {
@@ -81,6 +83,8 @@ export interface UserProfile {
     username: string;
     /** set when signed in */
     email?: string;
+    verified?: boolean;
+    needsName?: boolean;
 }
 
 export interface GameMove {

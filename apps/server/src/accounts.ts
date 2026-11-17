@@ -61,6 +61,13 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
         username: { type: 'string', required: false, input: false },
         /** lower case, for uniqueness */
         usernameKey: { type: 'string', required: false, input: false },
+        /** guest ids from other devices: their past games count as yours */
+        linkedPlayerIds: { type: 'string[]', required: false, input: false },
+        /** set once the player has chosen their username after signing up */
+        namePicked: { type: 'boolean', required: false, input: false },
+        /** social handles shown on the profile (no @) */
+        x: { type: 'string', required: false, input: false },
+        instagram: { type: 'string', required: false, input: false },
       },
     },
     session: { modelName: MODELS.session, expiresIn: 60 * 60 * 24 * 90 },
@@ -79,7 +86,16 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     ],
   });
 
-  type AccountUser = { id: string; email: string; playerId?: string | null; username?: string | null };
+  type AccountUser = {
+    id: string;
+    email: string;
+    playerId?: string | null;
+    username?: string | null;
+    linkedPlayerIds?: string[] | null;
+    namePicked?: boolean | null;
+    x?: string | null;
+    instagram?: string | null;
+  };
   const ctx = () => auth.$context;
 
   async function findByName(name: string): Promise<AccountUser | null> {
@@ -92,7 +108,7 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     return adapter.findOne<AccountUser>({ model: 'user', where: [{ field: 'playerId', value: playerId }] });
   }
 
-  async function update(userId: string, data: Partial<AccountUser> & { usernameKey?: string }) {
+  async function update(userId: string, data: Partial<Omit<AccountUser, 'id'>> & { usernameKey?: string }) {
     const { internalAdapter } = await ctx();
     await internalAdapter.updateUser(userId, data);
   }
@@ -122,7 +138,14 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
      * scores (the name gets a number if an account already has it).
      */
     async playerFor(user: AccountUser, guest: Identity | null): Promise<Identity> {
-      if (user.playerId && user.username) return { id: user.playerId, name: user.username, guest: false };
+      if (user.playerId && user.username) {
+        // Signing in on another device: that guest's games become yours too.
+        const linked = user.linkedPlayerIds ?? [];
+        if (guest?.guest && guest.id !== user.playerId && !linked.includes(guest.id) && !(await findByPlayer(guest.id))) {
+          await update(user.id, { linkedPlayerIds: [...linked, guest.id].slice(-20) });
+        }
+        return { id: user.playerId, name: user.username, guest: false };
+      }
       const base = guest?.guest ? guest : newGuest();
       // a guest token whose id already belongs to an account can't be claimed twice
       const id = guest?.guest && !(await findByPlayer(base.id)) ? base.id : newGuest().id;
@@ -137,12 +160,47 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
       return !!owner && owner.playerId !== playerId;
     },
 
+    /** Every player id whose games belong to this player (theirs plus linked guests). */
+    async playerIds(playerId: string): Promise<{ ids: string[]; account: AccountUser | null }> {
+      const account = await findByPlayer(playerId);
+      return { ids: [playerId, ...(account?.linkedPlayerIds ?? [])], account };
+    },
+
+    /** Public account info (check mark, tagline, link) for these players. */
+    async publicInfo(playerIds: string[]): Promise<Map<string, Socials & { username?: string }>> {
+      const out = new Map<string, Socials & { username?: string }>();
+      if (!playerIds.length) return out;
+      const { adapter } = await ctx();
+      const users = await adapter.findMany<AccountUser>({
+        model: 'user',
+        where: [{ field: 'playerId', operator: 'in', value: playerIds }],
+      });
+      for (const u of users) {
+        if (u.playerId) out.set(u.playerId, { ...socials(u), ...(u.username ? { username: u.username } : {}) });
+      }
+      return out;
+    },
+
+    async setSocials(playerId: string, p: { x: string | null; instagram: string | null }) {
+      const owner = await findByPlayer(playerId);
+      if (owner) await update(owner.id, p);
+    },
+
+    /** Has this account chosen its username yet? (New accounts must.) */
+    needsName: (user: AccountUser) => !user.namePicked,
+
     /** Keep an account's reserved name in step with a rename. */
     async rename(playerId: string, name: string) {
       const owner = await findByPlayer(playerId);
-      if (owner) await update(owner.id, { username: name, usernameKey: name.toLowerCase() });
+      if (owner) await update(owner.id, { username: name, usernameKey: name.toLowerCase(), namePicked: true });
     },
   };
 }
 
 export type Accounts = ReturnType<typeof createAccounts>;
+
+export type Socials = { x?: string; instagram?: string };
+const socials = (u: { x?: string | null; instagram?: string | null }): Socials => ({
+  ...(u.x ? { x: u.x } : {}),
+  ...(u.instagram ? { instagram: u.instagram } : {}),
+});

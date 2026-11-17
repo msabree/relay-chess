@@ -27,6 +27,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   await Promise.all([
     games.createIndex({ roomId: 1 }, { unique: true }),
     games.createIndex({ timestamp: 1 }),
+    games.createIndex({ userIds: 1, timestamp: -1 }),
     scores.createIndex({ period: 1, key: 1, userId: 1 }, { unique: true }),
     scores.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
@@ -60,6 +61,10 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     async listScores(period, key) {
       const docs = await scores.find({ period, key }).toArray();
       return docs.map((d) => strip(d) as Score);
+    },
+    async gamesFor(userIds, limit) {
+      const docs = await games.find({ userIds: { $in: userIds } }, { projection: { gameHistory: { $slice: -1 }, analysis: 0 } }).sort({ timestamp: -1 }).limit(limit).toArray();
+      return docs.map((d) => strip(d) as GameRecord);
     },
     async saveContact(msg) {
       await contact.insertOne(msg);

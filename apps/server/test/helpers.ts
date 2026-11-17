@@ -97,7 +97,7 @@ export async function startServer(opts: { abandonMs?: number; lobbyMs?: number }
     expect(session).toBeTruthy();
     const r = await api('/account/session', { method: 'POST', token: session, json: { guestToken } });
     expect(r.status).toBe(200);
-    return { session, ...(r.body as { token: string; user: { id: string; username: string; email: string } }) };
+    return { session, ...(r.body as { token: string; user: { id: string; username: string; email: string; needsName?: boolean } }) };
   };
 
   /** A connected player: token, user and socket. */

@@ -11,6 +11,9 @@ export interface Me {
   username: string;
   /** set when signed in */
   email?: string;
+  verified?: boolean;
+  /** a new account that hasn't chosen its username yet */
+  needsName?: boolean;
 }
 interface Stored {
   token: string;
@@ -91,7 +94,6 @@ export async function ensurePlayer(): Promise<Stored> {
 
 /**
  * Email a sign-in code (the email also has a link to /signin).
- * @public used by AccountSection, which is parked for now
  */
 export async function sendSignInCode(email: string) {
   const res = await post('/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' });
@@ -114,7 +116,6 @@ export async function signInWithCode(email: string, code: string): Promise<Me> {
 
 /**
  * Sign out and continue as a new guest.
- * @public used by AccountSection, which is parked for now
  */
 export async function signOut() {
   const session = read()?.session;

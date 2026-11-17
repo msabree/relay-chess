@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { AppContext } from '@/contexts/App';
+import SocialsForm from '@/components/SocialsForm';
 import { useUser } from '@/hooks/useUser';
 import { sendSignInCode, signInWithCode, signOut } from '@/lib/auth';
 
@@ -16,6 +20,8 @@ const errorText: Record<string, string> = {
  */
 const AccountSection = () => {
   const user = useUser();
+  const router = useRouter();
+  const { setRightDrawerOpen } = useContext(AppContext);
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -43,6 +49,14 @@ const AccountSection = () => {
         <p className="mt-1 text-sm text-fg-muted">
           Signed in as <span className="font-medium text-fg">{signedIn}</span>. Your name is yours on every device.
         </p>
+        <div className="mt-3 flex gap-2">
+        <Link
+          href={`/players/${user.data!._id}`}
+          onClick={() => setRightDrawerOpen(false)}
+          className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent/90"
+        >
+          Your profile
+        </Link>
         <button
           type="button"
           disabled={busy}
@@ -51,10 +65,14 @@ const AccountSection = () => {
             setStep('email');
             setCode('');
           })}
-          className="mt-3 h-10 rounded-lg border border-line px-4 text-sm font-medium hover:bg-fg/5 disabled:opacity-50"
+          className="h-10 rounded-lg border border-line px-4 text-sm font-medium hover:bg-fg/5 disabled:opacity-50"
         >
           {busy ? 'Signing out' : 'Sign out'}
         </button>
+        </div>
+        <div className="mt-6">
+          <SocialsForm playerId={user.data!._id} />
+        </div>
       </section>
     );
   }
@@ -99,7 +117,11 @@ const AccountSection = () => {
           onSubmit={(e) => {
             e.preventDefault();
             if (cleanCode.length !== 6) return setError('Enter the 6-digit code.');
-            run(() => signInWithCode(cleanEmail, cleanCode));
+            run(async () => {
+              const me = await signInWithCode(cleanEmail, cleanCode);
+              setRightDrawerOpen(false);
+              await router.push(`/players/${me.id}`);
+            });
           }}
         >
           <label htmlFor="signin-code" className="text-sm text-fg-muted">

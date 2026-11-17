@@ -8,7 +8,7 @@ import { bearer, cleanNickname, newGuest, NICKNAME, signAccessToken, verifyAcces
 import type { Accounts } from './accounts';
 import type { Config } from './config';
 import { leaderboardPage, leaderboardPosition, PERIODS } from './leaderboard';
-import type { Store } from './store/types';
+import type { GameRecord, Store } from './store/types';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -28,7 +28,14 @@ function toAnnouncement(d: { id: string; text?: unknown; link?: unknown; linkTex
   return { id: d.id, text, ...(link ? { link, linkText: linkText ?? 'Learn more' } : {}), tone: d.tone === 'warning' ? 'warning' : 'info' };
 }
 
-const me = (who: Identity) => ({ id: who.id, username: who.name });
+const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+const me = (who: Identity) => ({ id: who.id, username: who.name, ...(who.guest ? {} : { verified: true }) });
+
+/** Social handles, without the @. Empty clears. */
+const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
+const IG_HANDLE = /^(?!.*\.\.)[A-Za-z0-9._]{1,30}$/;
+const handle = (re: RegExp) => z.string().trim().max(40).transform((v) => v.replace(/^@/, '')).pipe(z.union([z.literal(''), z.string().regex(re)]));
 
 const wrap =
   (fn: (req: Request, res: Response) => Promise<unknown>): RequestHandler =>
@@ -106,7 +113,11 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
       const body = z.object({ guestToken: z.string().max(2000).optional() }).safeParse(req.body ?? {});
       const guest = body.success && body.data.guestToken ? verifyAccessToken(config.AUTH_SECRET, body.data.guestToken) : null;
       const who = await accounts.playerFor(user, guest);
-      res.json({ token: signAccessToken(config.AUTH_SECRET, who), user: { ...me(who), email: user.email } });
+      const fresh = await accounts.sessionUser(req.headers);
+      res.json({
+        token: signAccessToken(config.AUTH_SECRET, who),
+        user: { ...me(who), email: user.email, ...(fresh && accounts.needsName(fresh) ? { needsName: true } : {}) },
+      });
     }),
   );
 
@@ -183,6 +194,94 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
     }),
   );
 
+  // ---- profiles ----
+
+  /** Public profile: name, check mark, tagline, link, record, recent games and partners. */
+  app.get(
+    '/players/:id',
+    wrap(async (req, res) => {
+      const id = String(req.params.id).slice(0, 64);
+      const { ids, account } = await accounts.playerIds(id);
+      const games = await store.gamesFor(ids, 100);
+      const offset = Math.max(0, Math.min(90, Number(req.query.offset) || 0));
+      const pageSize = Math.max(1, Math.min(30, Number(req.query.limit) || 12));
+      const mine = (g: GameRecord) => (g.whiteTeamUserIds.some((u) => ids.includes(u)) ? 'white' : 'black');
+      const lastName = games.flatMap((g) => [...g.whiteTeam, ...g.blackTeam]).find((p) => ids.includes(p.id))?.name;
+      const name = account?.username ?? lastName;
+      if (!name) return res.status(404).json({ error: 'not-found' });
+
+      let wins = 0, losses = 0, draws = 0;
+      const partners = new Map<string, { id: string; name: string; games: number; wins: number }>();
+      for (const g of games) {
+        const side = mine(g);
+        const won = g.winningColor === side;
+        if (!g.winningColor) draws++;
+        else if (won) wins++;
+        else losses++;
+        for (const p of side === 'white' ? g.whiteTeam : g.blackTeam) {
+          if (ids.includes(p.id)) continue;
+          const cur = partners.get(p.id) ?? { id: p.id, name: p.name, games: 0, wins: 0 };
+          cur.games++;
+          if (won) cur.wins++;
+          partners.set(p.id, cur);
+        }
+      }
+      const info = await accounts.publicInfo([...partners.keys()]);
+      res.json({
+        player: {
+          id,
+          username: name,
+          ...(account ? { verified: true } : {}),
+          ...(account?.x ? { x: account.x } : {}),
+          ...(account?.instagram ? { instagram: account.instagram } : {}),
+        },
+        // "100+" when we stopped counting: the list is capped
+        record: { wins, losses, draws, games: games.length, capped: games.length === 100 },
+        partners: [...partners.values()]
+          .sort((a, b) => b.games - a.games)
+          .slice(0, 6)
+          .map((p) => (info.has(p.id) ? { ...p, verified: true } : p)),
+        games: games.slice(offset, offset + pageSize).map((g) => ({
+          roomId: g.roomId,
+          at: g.timestamp,
+          gameType: g.gameType,
+          reason: g.reason,
+          side: mine(g),
+          outcome: !g.winningColor ? 'draw' : g.winningColor === mine(g) ? 'win' : 'loss',
+          team: (mine(g) === 'white' ? g.whiteTeam : g.blackTeam).filter((p) => !ids.includes(p.id)).map((p) => p.name),
+          fen: g.gameHistory.at(-1)?.fen ?? START_FEN,
+          lastMove: g.gameHistory.at(-1)?.lanMove?.slice(0, 4),
+          opponents: (mine(g) === 'white' ? g.blackTeam : g.whiteTeam).map((p) => p.name),
+        })),
+      });
+    }),
+  );
+
+  /** Your X and Instagram handles (accounts only). Empty strings clear them. */
+  app.patch(
+    '/me/socials',
+    requireAuth,
+    wrap(async (req, res) => {
+      if (req.who!.guest) return res.status(403).json({ error: 'account-required' });
+      const body = z.object({ x: handle(X_HANDLE), instagram: handle(IG_HANDLE) }).strict().safeParse(req.body);
+      if (!body.success) return res.status(400).json({ error: 'invalid-handle' });
+      const s = { x: body.data.x || null, instagram: body.data.instagram || null };
+      await accounts.setSocials(req.who!.id, s);
+      res.json(s);
+    }),
+  );
+
+  /** Can I take this username? Accounts hold names; guests don't. */
+  app.get(
+    '/names/available',
+    wrap(async (req, res) => {
+      const name = cleanNickname(String(req.query.name ?? '').slice(0, 40));
+      if (!NICKNAME.test(name)) return res.json({ available: false, reason: 'invalid' });
+      const taken = await accounts.nameTaken(name, req.who?.id ?? '');
+      res.json(taken ? { available: false, reason: 'taken' } : { available: true });
+    }),
+  );
+
   // ---- leaderboard (today / this week) ----
 
   const period = z.enum(PERIODS as [string, ...string[]]).default('daily');
@@ -198,7 +297,16 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
         })
         .safeParse(req.query);
       if (!q.success) return res.status(400).json({ error: 'invalid-input' });
-      res.json(await leaderboardPage(store, q.data.period as never, q.data.page, q.data.pageSize));
+      const page = await leaderboardPage(store, q.data.period as never, q.data.page, q.data.pageSize);
+      const info = await accounts.publicInfo(page.rows.map((r) => r.userId));
+      // signed-in players show their current name, not the one from their last game
+      res.json({
+        ...page,
+        rows: page.rows.map((r) => {
+          const a = info.get(r.userId);
+          return a ? { ...r, username: a.username ?? r.username, verified: true } : r;
+        }),
+      });
     }),
   );
 

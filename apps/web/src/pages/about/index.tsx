@@ -3,7 +3,6 @@ import Link from 'next/link';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import ContactUsForm from '@/components/ContactUsForm';
-import useGamesPlayed from '@/hooks/useGamesPlayed';
 import { SITE_URL } from '@/constants';
 import { REPO_URL, issueUrl } from '@/lib/github';
 
@@ -21,8 +20,6 @@ const HELP = [
 ];
 
 export default function AboutPage() {
-  const gamesPlayed = useGamesPlayed();
-
   return (
     <>
       <Head>
@@ -52,16 +49,6 @@ export default function AboutPage() {
               <p>
                 We built it so game night works from anywhere. It is free, it has no ads, and the code is open, so it
                 sticks around for as long as people want to play.
-                {gamesPlayed ? (
-                  <>
-                    {' '}
-                    So far that&apos;s{' '}
-                    <span className="rounded-md bg-accent px-1.5 font-semibold tabular-nums text-accent-fg">
-                      {gamesPlayed.toLocaleString('en-US')}
-                    </span>{' '}
-                    games.
-                  </>
-                ) : null}
               </p>
             </div>
 

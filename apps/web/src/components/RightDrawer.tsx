@@ -3,8 +3,7 @@ import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
 import { isAxiosError } from 'axios';
 import { renamePlayer } from '@/apis/auth';
-// Sign in is parked for now. Uncomment this and <AccountSection /> below to bring it back.
-// import AccountSection from '@/components/AccountSection';
+import AccountSection from '@/components/AccountSection';
 import { BOARD_COLOR_SCHEMES } from '@/constants';
 import { setBoardColor, useBoardColor } from '@/lib/settings';
 
@@ -70,7 +69,7 @@ const SettingsDrawer = () => {
         </div>
 
         <div className="flex-1 space-y-8 overflow-y-auto p-5">
-          {/* <AccountSection /> */}
+          <AccountSection />
 
           <form
             onSubmit={(e) => {

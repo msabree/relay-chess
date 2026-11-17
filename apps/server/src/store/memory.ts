@@ -40,6 +40,13 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     async listScores(period, key) {
       return [...scores.values()].filter((s) => s.period === period && s.key === key).map(copy);
     },
+    async gamesFor(userIds, limit) {
+      return [...games.values()]
+        .filter((g) => g.userIds.some((id) => userIds.includes(id)))
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, limit)
+        .map(copy);
+    },
     async saveContact(msg) {
       contacts.push(copy(msg));
     },
