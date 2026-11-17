@@ -4,9 +4,6 @@ export interface PublicPlayer {
   id: string;
   username: string;
   verified?: boolean;
-  /** handles, without the @ */
-  x?: string;
-  instagram?: string;
 }
 
 export interface ProfileGame {
@@ -34,4 +31,3 @@ export const getProfile = (id: string, offset = 0, limit = 12) =>
   api.get<Profile>(`/players/${encodeURIComponent(id)}`, { params: { offset, limit } }).then((r) => r.data);
 
 /** Accounts only. Empty strings clear a handle. */
-export const updateSocials = (s: { x: string; instagram: string }) => api.patch<{ x: string | null; instagram: string | null }>('/me/socials', s);

@@ -10,7 +10,6 @@ import VerifiedMark from '@/components/VerifiedMark';
 import { initials } from '@/components/game/util';
 import RecentGames from '@/components/profile/RecentGames';
 import Partners from '@/components/profile/Partners';
-import Socials from '@/components/profile/Socials';
 import { AppContext } from '@/contexts/App';
 import { getProfile } from '@/apis/players';
 import { useUser } from '@/hooks/useUser';
@@ -64,7 +63,6 @@ export default function PlayerPage() {
                   {p.record.losses === 1 ? 'loss' : 'losses'}
                 </p>
               </div>
-              <Socials player={p.player} />
               {isMe && (
                 <button
                   type="button"

@@ -137,26 +137,17 @@ describe('profiles', () => {
     expect((await t.api('/leaderboard?period=daily')).body.rows[0]).toMatchObject({ userId: laptop.user.id, username: toUsername(phone.user.username), verified: true });
   });
 
-  it('accounts can add X and Instagram handles; guests cannot', async () => {
+  it('accounts get the check mark on their profile and the leaderboard', async () => {
     const g = await t.guest();
-    expect((await t.api('/me/socials', { method: 'PATCH', token: g.token, json: { x: 'rook', instagram: '' } })).status).toBe(403);
     const a = await t.signIn('rook@example.com', g.token);
     await game('r1', [{ id: a.user.id, name: a.user.username }], [{ id: 'p_o', name: 'O' }], 'white');
-    expect((await t.api('/me/socials', { method: 'PATCH', token: a.token, json: { x: 'not a handle', instagram: '' } })).status).toBe(400);
-    expect((await t.api('/me/socials', { method: 'PATCH', token: a.token, json: { x: 'https://x.com/rook', instagram: '' } })).status).toBe(400);
-    const ok = await t.api('/me/socials', { method: 'PATCH', token: a.token, json: { x: '@quiet_rook', instagram: 'quiet.rook' } });
-    expect(ok.body).toEqual({ x: 'quiet_rook', instagram: 'quiet.rook' });
-    expect((await t.api(`/players/${a.user.id}`)).body.player).toMatchObject({ verified: true, x: 'quiet_rook', instagram: 'quiet.rook' });
-    // the leaderboard only carries the check mark
+    expect((await t.api(`/players/${a.user.id}`)).body.player).toMatchObject({ verified: true });
     await t.store.addScore({ period: 'daily', key: bucket('daily', new Date()).key, userId: a.user.id, name: a.user.username, outcome: 'win', expiresAt: new Date(Date.now() + 86_400_000) });
     const lb = await t.api('/leaderboard?period=daily');
     expect(lb.body.rows[0]).toMatchObject({ userId: a.user.id, verified: true });
     // a rename shows on the board right away for accounts
     await t.api('/me', { method: 'PATCH', token: a.token, json: { username: 'LoudRook' } });
     expect((await t.api('/leaderboard?period=daily')).body.rows[0].username).toBe('LoudRook');
-    expect(lb.body.rows[0].x).toBeUndefined();
-    await t.api('/me/socials', { method: 'PATCH', token: a.token, json: { x: '', instagram: '' } });
-    expect((await t.api(`/players/${a.user.id}`)).body.player.x).toBeUndefined();
   });
 
   it('new accounts must pick a username; picking one clears that', async () => {

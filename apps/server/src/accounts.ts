@@ -66,9 +66,6 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
         linkedPlayerIds: { type: 'string[]', required: false, input: false },
         /** set once the player has chosen their username after signing up */
         namePicked: { type: 'boolean', required: false, input: false },
-        /** social handles shown on the profile (no @) */
-        x: { type: 'string', required: false, input: false },
-        instagram: { type: 'string', required: false, input: false },
       },
     },
     session: { modelName: MODELS.session, expiresIn: 60 * 60 * 24 * 90 },
@@ -94,8 +91,6 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     username?: string | null;
     linkedPlayerIds?: string[] | null;
     namePicked?: boolean | null;
-    x?: string | null;
-    instagram?: string | null;
   };
   const ctx = () => auth.$context;
 
@@ -193,17 +188,12 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     },
 
     /** Public account info (check mark, tagline, link) for these players. */
-    async publicInfo(playerIds: string[]): Promise<Map<string, Socials & { username?: string }>> {
-      const out = new Map<string, Socials & { username?: string }>();
+    async publicInfo(playerIds: string[]): Promise<Map<string, { username?: string }>> {
+      const out = new Map<string, { username?: string }>();
       for (const [id, u] of await ownersOf(playerIds)) {
-        out.set(id, { ...socials(u), ...(u.username ? { username: u.username } : {}) });
+        out.set(id, u.username ? { username: u.username } : {});
       }
       return out;
-    },
-
-    async setSocials(playerId: string, p: { x: string | null; instagram: string | null }) {
-      const owner = await findByPlayer(playerId);
-      if (owner) await update(owner.id, p);
     },
 
     /** Has this account chosen a valid username yet? New accounts, and older ones with spaces in their name, must. */
@@ -218,9 +208,3 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
 }
 
 export type Accounts = ReturnType<typeof createAccounts>;
-
-export type Socials = { x?: string; instagram?: string };
-const socials = (u: { x?: string | null; instagram?: string | null }): Socials => ({
-  ...(u.x ? { x: u.x } : {}),
-  ...(u.instagram ? { instagram: u.instagram } : {}),
-});

@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
 import { isAxiosError } from 'axios';
@@ -11,11 +12,12 @@ import { setBoardColor, useBoardColor } from '@/lib/settings';
 const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
 const LABELS: Record<string, string> = { slate: 'Slate', 'blue-white': 'Blue', 'green-white': 'Green', 'red-white': 'Red' };
 
-/** Settings: sign in, your nickname and board colors. */
+/** Settings: sign in, your nickname, theme and board colors. */
 const SettingsDrawer = () => {
   const { rightDrawerOpen: open, setRightDrawerOpen: setOpen } = useContext(AppContext);
   const user = useUser();
   const board = useBoardColor();
+  const { theme, setTheme } = useTheme();
   const [name, setName] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'taken'>('idle');
 
@@ -118,6 +120,24 @@ const SettingsDrawer = () => {
                     : '2 to 20 characters.'}
             </p>
           </form>
+
+          <div>
+            <h3 id="theme-label" className="text-sm font-semibold">Theme</h3>
+            <div role="radiogroup" aria-labelledby="theme-label" className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-raised p-1">
+              {(['system', 'light', 'dark'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={theme === t}
+                  onClick={() => setTheme(t)}
+                  className={`h-9 rounded-md text-sm font-medium capitalize ${theme === t ? 'bg-surface shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div>
             <h3 id="board-label" className="text-sm font-semibold">Board</h3>

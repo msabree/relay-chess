@@ -4,7 +4,6 @@ import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
 import Logo from '@/icons/Logo';
-import ThemeToggle from '@/components/ThemeToggle';
 import SettingsDrawer from '@/components/RightDrawer';
 import { initials } from '@/components/game/util';
 import AccountMenu from '@/components/AccountMenu';
@@ -59,7 +58,6 @@ const NavigationBar = ({ compact = false }: { compact?: boolean }) => {
                 Play
               </Link>
             )}
-            <ThemeToggle />
             {signedIn && user.data && <AccountMenu id={user.data._id} name={user.data.username} />}
             {!signedIn && user.data && (
               <button

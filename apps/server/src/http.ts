@@ -33,9 +33,6 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const me = (who: Identity) => ({ id: who.id, username: who.name, ...(who.guest ? {} : { verified: true }) });
 
 /** Social handles, without the @. Empty clears. */
-const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
-const IG_HANDLE = /^(?!.*\.\.)[A-Za-z0-9._]{1,30}$/;
-const handle = (re: RegExp) => z.string().trim().max(40).transform((v) => v.replace(/^@/, '')).pipe(z.union([z.literal(''), z.string().regex(re)]));
 
 const wrap =
   (fn: (req: Request, res: Response) => Promise<unknown>): RequestHandler =>
@@ -233,8 +230,6 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
           id: account?.playerId ?? id,
           username: name,
           ...(account ? { verified: true } : {}),
-          ...(account?.x ? { x: account.x } : {}),
-          ...(account?.instagram ? { instagram: account.instagram } : {}),
         },
         // "100+" when we stopped counting: the list is capped
         record: { wins, losses, draws, games: games.length, capped: games.length === 100 },
@@ -255,20 +250,6 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
           opponents: (mine(g) === 'white' ? g.blackTeam : g.whiteTeam).map((p) => p.name),
         })),
       });
-    }),
-  );
-
-  /** Your X and Instagram handles (accounts only). Empty strings clear them. */
-  app.patch(
-    '/me/socials',
-    requireAuth,
-    wrap(async (req, res) => {
-      if (req.who!.guest) return res.status(403).json({ error: 'account-required' });
-      const body = z.object({ x: handle(X_HANDLE), instagram: handle(IG_HANDLE) }).strict().safeParse(req.body);
-      if (!body.success) return res.status(400).json({ error: 'invalid-handle' });
-      const s = { x: body.data.x || null, instagram: body.data.instagram || null };
-      await accounts.setSocials(req.who!.id, s);
-      res.json(s);
     }),
   );
 

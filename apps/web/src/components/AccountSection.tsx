@@ -2,7 +2,6 @@ import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
-import SocialsForm from '@/components/SocialsForm';
 import { useUser } from '@/hooks/useUser';
 import { sendSignInCode, signInWithCode, signOut } from '@/lib/auth';
 
@@ -69,9 +68,6 @@ const AccountSection = () => {
         >
           {busy ? 'Signing out' : 'Sign out'}
         </button>
-        </div>
-        <div className="mt-6">
-          <SocialsForm playerId={user.data!._id} />
         </div>
       </section>
     );
