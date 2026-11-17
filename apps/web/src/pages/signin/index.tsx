@@ -20,7 +20,7 @@ export default function SignInPage() {
     // Don't leave the code in the address bar or history.
     router.replace('/signin', undefined, { shallow: true });
     signInWithCode(email, code).then(
-      (user) => void router.replace(`/players/${user.id}`),
+      (user) => void router.replace('/'),
       () => setState({ status: 'failed' }),
     );
   }, [router]);

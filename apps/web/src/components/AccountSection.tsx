@@ -118,9 +118,9 @@ const AccountSection = () => {
             e.preventDefault();
             if (cleanCode.length !== 6) return setError('Enter the 6-digit code.');
             run(async () => {
-              const me = await signInWithCode(cleanEmail, cleanCode);
+              await signInWithCode(cleanEmail, cleanCode);
               setRightDrawerOpen(false);
-              await router.push(`/players/${me.id}`);
+              await router.push('/');
             });
           }}
         >

@@ -38,9 +38,20 @@ const read = (): Stored | null => {
   return cache;
 };
 
+/**
+ * Mirror "signed in" onto <html data-signed-in>, so the page can hide the
+ * landing page before React renders (see _document).
+ */
+const markSignedIn = (on: boolean) => {
+  if (typeof document === 'undefined') return;
+  if (on) document.documentElement.dataset.signedIn = '';
+  else delete document.documentElement.dataset.signedIn;
+};
+
 const write = (s: Stored) => {
   const changed = s.token !== cache?.token;
   cache = s;
+  markSignedIn(!!s.session);
   try {
     window.localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
@@ -121,6 +132,7 @@ export async function signOut() {
   const session = read()?.session;
   if (session) await post('/api/auth/sign-out', {}, session).catch(() => {});
   cache = null;
+  markSignedIn(false);
   try {
     window.localStorage.removeItem(KEY);
   } catch {

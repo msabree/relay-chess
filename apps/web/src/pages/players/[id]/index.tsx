@@ -7,19 +7,13 @@ import { isAxiosError } from 'axios';
 import NavigationBar from '@/components/NavigationBar';
 import Footer from '@/components/Footer';
 import VerifiedMark from '@/components/VerifiedMark';
-import GameCard from '@/components/profile/GameCard';
+import { initials } from '@/components/game/util';
+import RecentGames from '@/components/profile/RecentGames';
+import Partners from '@/components/profile/Partners';
 import Socials from '@/components/profile/Socials';
 import { AppContext } from '@/contexts/App';
 import { getProfile } from '@/apis/players';
 import { useUser } from '@/hooks/useUser';
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
 export default function PlayerPage() {
   const router = useRouter();
@@ -99,55 +93,8 @@ export default function PlayerPage() {
               </div>
             )}
 
-            <section aria-labelledby="recent-games" className="flex flex-col gap-3.5">
-              <div className="flex items-baseline justify-between">
-                <h2 id="recent-games" className="text-lg font-semibold">
-                  Recent games
-                </h2>
-                {p.record.games > p.games.length && (
-                  <Link href={`/players/${id}/games`} className="text-sm font-semibold text-accent-ink underline-offset-4 hover:underline">
-                    View all {total}
-                  </Link>
-                )}
-              </div>
-              {p.games.length === 0 ? (
-                <p className="text-sm text-fg-muted">No finished games yet.</p>
-              ) : (
-                <div className="-mx-4 flex snap-x gap-3.5 overflow-x-auto px-4 pb-2">
-                  {p.games.map((g) => (
-                    <GameCard key={g.roomId} game={g} className="w-[212px] shrink-0 snap-start" />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section aria-labelledby="partners" className="flex flex-col gap-3.5">
-              <h2 id="partners" className="text-lg font-semibold">
-                Partners
-              </h2>
-              {p.partners.length === 0 ? (
-                <p className="text-sm text-fg-muted">Teammates show up here after a 2v2.</p>
-              ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {p.partners.map((t) => (
-                    <li key={t.id}>
-                      <Link href={`/players/${t.id}`} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-fg/5">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-raised text-xs font-bold">{initials(t.name)}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                            {t.name}
-                            {t.verified && <VerifiedMark size={12} />}
-                          </span>
-                          <span className="text-xs text-fg-muted">
-                            {t.games} {t.games === 1 ? 'game' : 'games'} together · {t.wins} {t.wins === 1 ? 'win' : 'wins'}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            <RecentGames profile={p} />
+            <Partners profile={p} />
           </div>
         )}
       </main>

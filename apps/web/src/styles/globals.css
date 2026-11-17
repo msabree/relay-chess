@@ -124,3 +124,8 @@
     .animate-fade-in, .animate-marquee, .animate-pulse { animation: none; }
   }
 }
+
+/* Signed-in visitors skip the guest landing page (flag set in _document before paint). */
+html[data-signed-in] .guest-only {
+  display: none;
+}

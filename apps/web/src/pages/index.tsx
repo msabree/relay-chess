@@ -8,6 +8,8 @@ import LiveGamesStrip from '@/components/LiveGamesStrip';
 import InviteTeammates from '@/modals/InviteTeammates';
 import CreatePrivateGame from '@/modals/CreatePrivateGame';
 import { AppContext } from '@/contexts/App';
+import { useUser } from '@/hooks/useUser';
+import SignedInHome from '@/components/home/SignedInHome';
 import { DEMO_VIDEO, OG_IMAGE, SITE_URL } from '@/constants';
 import useOnlineStats from '@/hooks/useOnlineStats';
 import useGamesPlayed from '@/hooks/useGamesPlayed';
@@ -31,6 +33,7 @@ const STEPS = [
   },
 ];
 
+/** What guests see: the pitch, the demo and every way to play. */
 const LandingPage = () => {
   const { setModal, modal } = useContext(AppContext);
   const { totalOnline } = useOnlineStats();
@@ -58,7 +61,7 @@ const LandingPage = () => {
 
       <NavigationBar />
 
-      <main>
+      <main className="guest-only">
         {/* Hero */}
         <section className="mx-auto grid max-w-6xl items-start gap-12 px-4 pb-16 pt-12 md:grid-cols-[1fr_1.05fr] md:pt-20">
           <div>
@@ -171,4 +174,10 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+/** Guests get the landing page; signed-in players get their home. */
+const IndexPage = () => {
+  const me = useUser();
+  return me.data?.verified ? <SignedInHome /> : <LandingPage />;
+};
+
+export default IndexPage;
