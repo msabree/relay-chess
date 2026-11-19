@@ -91,5 +91,17 @@ export interface Store {
   gamesFor(userIds: string[], limit: number): Promise<GameRecord[]>;
   /** Live banners right now, in order. */
   liveAnnouncements(now: Date): Promise<(AnnouncementDoc & { id: string })[]>;
+
+  /**
+   * Player ids of deleted accounts. Their games stay (for the totals), but
+   * their tokens stop working and their profile is gone for good.
+   */
+  retirePlayers(ids: string[]): Promise<void>;
+  retiredPlayers(): Promise<string[]>;
+  /** Usernames of deleted accounts (lower case): nobody can take them again. */
+  retireName(key: string): Promise<void>;
+  retiredNames(): Promise<string[]>;
+  /** Take these players off the leaderboards. */
+  deleteScores(userIds: string[]): Promise<void>;
   close(): Promise<void>;
 }

@@ -61,9 +61,13 @@ export interface HttpDeps {
   liveGames: () => unknown[];
   /** games in progress, private ones included */
   playing: () => number;
+  /** player ids of deleted accounts */
+  retired: ReadonlySet<string>;
+  /** retire a deleted account's player ids, and its username for good */
+  retire: (ids: string[], username?: string | null) => Promise<void>;
 }
 
-export function createHttpApp({ config, store, accounts, liveGames, playing }: HttpDeps) {
+export function createHttpApp({ config, store, accounts, liveGames, playing, retired, retire }: HttpDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -76,7 +80,9 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
   // Identify the caller if a token is present. Routes decide whether it's required.
   app.use((req, _res, next) => {
     const token = bearer(req.headers.authorization);
-    if (token) req.who = verifyAccessToken(config.AUTH_SECRET, token) ?? undefined;
+    const who = token ? verifyAccessToken(config.AUTH_SECRET, token) : null;
+    // A deleted account's players can't come back on an old token.
+    if (who && !retired.has(who.id)) req.who = who;
     next();
   });
   const requireAuth: RequestHandler = (req, res, next) => (req.who ? next() : res.status(401).json({ error: 'unauthorized' }));
@@ -119,6 +125,25 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
   );
 
   app.get('/me', requireAuth, (req, res) => res.json({ user: me(req.who!) }));
+
+  /**
+   * Delete your account (Authorization: Bearer <session token>). The profile
+   * disappears and the username is frozen: nobody can take it again, so old
+   * games that show it stay unambiguous. Games stay in the records, but the player
+   * ids behind the account are retired: their tokens stop working everywhere and
+   * their profile is a 404 for good. Signing up again starts a new player.
+   */
+  app.delete(
+    '/account',
+    wrap(async (req, res) => {
+      const user = await accounts.sessionUser(req.headers);
+      if (!user) return res.status(401).json({ error: 'unauthorized' });
+      const ids = [user.playerId, ...(user.linkedPlayerIds ?? [])].filter((id): id is string => !!id);
+      await retire(ids, user.username); // first, so a failure below never leaves the profile public
+      await accounts.remove(user);
+      res.json({ ok: true });
+    }),
+  );
 
   /** Change your nickname; you get a fresh token. Names held by an account are off limits. */
   app.patch(
@@ -202,6 +227,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
     '/players/:id',
     wrap(async (req, res) => {
       const id = String(req.params.id).slice(0, 64);
+      if (retired.has(id)) return res.status(404).json({ error: 'not-found' });
       const { ids, account } = await accounts.playerIds(id);
       const games = await store.gamesFor(ids, 100);
       const offset = Math.max(0, Math.min(90, Number(req.query.offset) || 0));
@@ -220,7 +246,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
         else if (won) wins++;
         else losses++;
         for (const p of side === 'white' ? g.whiteTeam : g.blackTeam) {
-          if (ids.includes(p.id)) continue;
+          if (ids.includes(p.id) || retired.has(p.id)) continue;
           const cur = partners.get(p.id) ?? { id: p.id, name: p.name, games: 0, wins: 0 };
           cur.games++;
           if (won) cur.wins++;

@@ -44,7 +44,7 @@ const S = {
   partyQueue: z.object({ partyId: z.string().regex(PARTY_ID), timeControl: queueTimeControl }),
 };
 
-export function attachRealtime(io: IO, deps: { config: Config; store: Store; abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number }) {
+export function attachRealtime(io: IO, deps: { config: Config; store: Store; retired?: ReadonlySet<string>; abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number }) {
   const { config, store } = deps;
   const online = new Map<string, number>();
   let statsDirty = false;
@@ -125,7 +125,8 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; aba
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
     const who = typeof token === 'string' ? verifyAccessToken(config.AUTH_SECRET, token) : null;
-    if (!who) return next(new Error('unauthorized'));
+    // A deleted account's players can't come back on an old token.
+    if (!who || deps.retired?.has(who.id)) return next(new Error('unauthorized'));
     socket.data.who = who;
     socket.data.rooms = new Set();
     socket.data.parties = new Set();

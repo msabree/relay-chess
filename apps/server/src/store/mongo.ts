@@ -20,6 +20,8 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const scores: Collection<Score> = db.collection('scores');
   const contact: Collection<ContactMessage> = db.collection('contact-us');
   const announcements: Collection<AnnouncementDoc> = db.collection('announcements');
+  const retired: Collection<{ _id: string; at: Date }> = db.collection('retired_players');
+  const retiredNames: Collection<{ _id: string; at: Date }> = db.collection('retired_names');
 
   // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
   await games.dropIndex('timestamp_1').catch(() => {});
@@ -68,6 +70,22 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     },
     async saveContact(msg) {
       await contact.insertOne(msg);
+    },
+    async retirePlayers(ids) {
+      if (!ids.length) return;
+      await retired.bulkWrite(ids.map((id) => ({ updateOne: { filter: { _id: id }, update: { $setOnInsert: { at: new Date() } }, upsert: true } })));
+    },
+    async retiredPlayers() {
+      return (await retired.find({}, { projection: { _id: 1 } }).toArray()).map((d) => d._id);
+    },
+    async retireName(key) {
+      await retiredNames.updateOne({ _id: key }, { $setOnInsert: { at: new Date() } }, { upsert: true });
+    },
+    async retiredNames() {
+      return (await retiredNames.find({}, { projection: { _id: 1 } }).toArray()).map((d) => d._id);
+    },
+    async deleteScores(userIds) {
+      await scores.deleteMany({ userId: { $in: userIds } });
     },
     async liveAnnouncements(now) {
       const docs = await announcements

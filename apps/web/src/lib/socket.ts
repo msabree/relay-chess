@@ -3,7 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import type { Ack, ClientToServerEvents, ServerToClientEvents } from '@relay-chess/game';
 import { SERVER_URL } from '@/constants';
 import { useUser } from '@/hooks/useUser';
-import { getToken, onAuthChange } from './auth';
+import { getToken, onAuthChange, tokenRejected } from './auth';
 
 export type RelaySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -18,9 +18,18 @@ function getSocket(): RelaySocket {
       transports: ['websocket'],
       auth: (cb) => cb({ token: getToken() }),
     });
-    // New identity (sign in/out, rename): reconnect so the server sees it.
+    // New identity (sign in/out, rename, a fresh guest): reconnect so the server sees it.
     onAuthChange(() => {
-      if (s.active) s.disconnect().connect();
+      s.disconnect().connect();
+    });
+    // The server turned our token away (e.g. the account was deleted on another
+    // device): start over as a new guest, which reconnects through onAuthChange.
+    s.on('connect_error', (e) => {
+      if (e.message === 'unauthorized') void tokenRejected(getToken());
+    });
+    // Kicked by the server (that same delete): try again, so a dead token shows up above.
+    s.on('disconnect', (reason) => {
+      if (reason === 'io server disconnect') s.connect();
     });
     // The server restarted (a release): reload to get a clean page. Not on a game
     // page, where the player should see what happened to their game.

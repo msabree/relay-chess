@@ -125,12 +125,8 @@ export async function signInWithCode(email: string, code: string): Promise<Me> {
   return s.user;
 }
 
-/**
- * Sign out and continue as a new guest.
- */
-export async function signOut() {
-  const session = read()?.session;
-  if (session) await post('/api/auth/sign-out', {}, session).catch(() => {});
+/** Forget this player and continue as a new guest. */
+async function startOver() {
   cache = null;
   markSignedIn(false);
   try {
@@ -139,6 +135,36 @@ export async function signOut() {
     /* storage disabled */
   }
   await ensurePlayer();
+}
+
+/**
+ * Sign out and continue as a new guest.
+ */
+export async function signOut() {
+  const session = read()?.session;
+  if (session) await post('/api/auth/sign-out', {}, session).catch(() => {});
+  await startOver();
+}
+
+/**
+ * Delete the account. The profile and name go away; past games stay in the
+ * records but no longer belong to anyone. Continues as a new guest.
+ */
+export async function deleteAccount() {
+  const session = read()?.session;
+  if (!session) throw new Error('not-signed-in');
+  const res = await fetch(`${SERVER_URL}/account`, { method: 'DELETE', headers: { authorization: `Bearer ${session}` } });
+  if (!res.ok) throw new Error('delete-failed');
+  await startOver();
+}
+
+/**
+ * The server stopped accepting this token (its account was deleted on another
+ * device, or the token is otherwise dead): start over as a new guest. Only
+ * acts if the rejected token is still the one we hold.
+ */
+export async function tokenRejected(token: string | null) {
+  if (token && read()?.token === token) await startOver();
 }
 
 export const getToken = () => read()?.token ?? null;

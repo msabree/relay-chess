@@ -45,7 +45,8 @@ export function resendMailer(config: Config): Mailer {
 
 const MODELS = { user: 'auth_users', session: 'auth_sessions', account: 'auth_accounts', verification: 'auth_verifications' };
 
-export function createAccounts(config: Config, db: Db | undefined, mail: Mailer) {
+/** `nameRetired`: lower-case usernames of deleted accounts, which stay taken for good. */
+export function createAccounts(config: Config, db: Db | undefined, mail: Mailer, nameRetired: (key: string) => boolean = () => false) {
   const auth = betterAuth({
     secret: config.AUTH_SECRET,
     baseURL: config.SERVER_URL ?? `http://localhost:${config.PORT}`,
@@ -133,12 +134,15 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
   }
 
   /** A free name based on `base`: "Quiet Rook", else "Quiet Rook 2", "Quiet Rook 3"… */
+  /** Held by an account, or by one that was deleted. */
+  const held = async (name: string) => nameRetired(name.toLowerCase()) || !!(await findByName(name));
+
   async function freeName(raw: string): Promise<string> {
     const base = toUsername(raw);
-    if (!(await findByName(base))) return base;
+    if (!(await held(base))) return base;
     for (let n = 2; n < 1000; n++) {
       const name = `${base.slice(0, 20 - String(n).length)}${n}`;
-      if (!(await findByName(name))) return name;
+      if (!(await held(name))) return name;
     }
     return (toUsername(newGuest().name).slice(0, 16) + Date.now().toString(36).slice(-4));
   }
@@ -176,6 +180,7 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
 
     /** Is this name held by an account other than this player's? */
     async nameTaken(name: string, playerId: string): Promise<boolean> {
+      if (nameRetired(name.toLowerCase())) return true;
       const owner = await findByName(name);
       return !!owner && owner.playerId !== playerId;
     },
@@ -198,6 +203,14 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
 
     /** Has this account chosen a valid username yet? New accounts, and older ones with spaces in their name, must. */
     needsName: (user: AccountUser) => !user.namePicked || !USERNAME.test(user.username ?? ''),
+
+    /** Delete an account: its sessions, sign-in methods and the user (which frees the name). */
+    async remove(user: AccountUser) {
+      const { internalAdapter } = await ctx();
+      await internalAdapter.deleteUserSessions(user.id);
+      await internalAdapter.deleteAccounts(user.id);
+      await internalAdapter.deleteUser(user.id);
+    },
 
     /** Keep an account's reserved name in step with a rename. */
     async rename(playerId: string, name: string) {

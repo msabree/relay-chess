@@ -217,3 +217,72 @@ describe('grey check in rooms', () => {
     expect(room.chat.at(-1)).toMatchObject({ userId: a.user.id, verified: true });
   });
 });
+
+describe('deleting an account', () => {
+  const game = (roomId: string, white: { id: string; name: string }[], black: { id: string; name: string }[]) =>
+    t.store.saveGame({
+      roomId, gameType: 'untimed', result: 'checkmate', reason: 'checkmate', winningColor: 'white', timeControl: null,
+      whiteTeam: white, blackTeam: black, whiteTeamUserIds: white.map((p) => p.id), blackTeamUserIds: black.map((p) => p.id),
+      userIds: [...white, ...black].map((p) => p.id), gameHistory: [], timestamp: new Date(),
+    });
+
+  it('needs a signed-in session', async () => {
+    const g = await t.guest();
+    expect((await t.api('/account', { method: 'DELETE', token: g.token })).status).toBe(401);
+    expect((await t.api('/account', { method: 'DELETE' })).status).toBe(401);
+  });
+
+  it('removes the account and retires its players; games stay; the email can start over', async () => {
+    const phone = await t.guest();
+    const laptop = await t.guest();
+    const a = await t.signIn('rook@example.com', phone.token);
+    const b = await t.signIn('rook@example.com', laptop.token); // links the laptop guest
+    await t.api('/me', { method: 'PATCH', token: a.token, json: { username: 'QuietRook' } });
+    const pal = await t.guest();
+    await game('g1', [{ id: phone.user.id, name: 'QuietRook' }, { id: pal.user.id, name: pal.user.username }], [{ id: 'p_o', name: 'O' }]);
+    await game('g2', [{ id: laptop.user.id, name: laptop.user.username }], [{ id: 'p_o', name: 'O' }]);
+    const key = bucket('daily', new Date()).key;
+    await t.store.addScore({ period: 'daily', key, userId: phone.user.id, name: 'QuietRook', expiresAt: new Date(Date.now() + 864e5), outcome: 'win' });
+    const watcher = await t.client(b.token); // a device still connected
+
+    const del = await t.api('/account', { method: 'DELETE', token: a.session });
+    expect(del.body).toEqual({ ok: true });
+
+    // profiles are gone, for the main player and the linked guest
+    expect((await t.api(`/players/${phone.user.id}`)).status).toBe(404);
+    expect((await t.api(`/players/${laptop.user.id}`)).status).toBe(404);
+    // and they drop out of other people's partner lists
+    expect((await t.api(`/players/${pal.user.id}`, { token: pal.token })).body.partners).toEqual([]);
+    // off the leaderboard
+    expect(await t.store.listScores('daily', key)).toEqual([]);
+    // old tokens stop working everywhere, sockets included
+    expect((await t.api('/me', { token: a.token })).status).toBe(401);
+    expect((await t.api('/me', { token: laptop.token })).status).toBe(401);
+    await expect(t.client(a.token)).rejects.toThrow('unauthorized');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(watcher.connected).toBe(false);
+    // the session is gone too
+    expect((await t.api('/account/session', { method: 'POST', token: a.session, json: {} })).status).toBe(401);
+    // games stay for the totals
+    expect(await t.store.getGame('g1')).not.toBeNull();
+    expect((await t.api('/stats')).body.gamesPlayed).toBeGreaterThanOrEqual(2);
+    // the name is frozen: nobody can take it again, any case, guest or account
+    const other = await t.signIn('other@example.com');
+    expect((await t.api('/me', { method: 'PATCH', token: other.token, json: { username: 'quietrook' } })).status).toBe(409);
+    expect((await t.api('/names/available?name=QuietRook', { token: other.token })).body).toMatchObject({ available: false });
+    const guest = await t.guest();
+    expect((await t.api('/me', { method: 'PATCH', token: guest.token, json: { username: 'QuietRook' } })).status).toBe(409);
+    // coming back with the same email is a brand-new player
+    const again = await t.signIn('rook@example.com');
+    expect(again.user.id).not.toBe(phone.user.id);
+    expect(again.user.needsName).toBe(true);
+    expect(again.user.username.toLowerCase()).not.toBe('quietrook');
+    // a guest called "Quiet Rook" who signs up gets the next free name, not the frozen one
+    const g2 = await t.guest();
+    const renamed = await t.api('/me', { method: 'PATCH', token: g2.token, json: { username: 'Quiet Rook' } });
+    expect(renamed.status).toBe(200);
+    const signedUp = await t.signIn('new@example.com', renamed.body.token);
+    expect(signedUp.user.username).toBe('QuietRook2');
+    expect((await t.api(`/players/${again.user.id}`)).body.record).toMatchObject({ games: 0 }); // old history isn't theirs
+  });
+});

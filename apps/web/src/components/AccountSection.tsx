@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
-import { sendSignInCode, signInWithCode, signOut } from '@/lib/auth';
+import { deleteAccount, sendSignInCode, signInWithCode, signOut } from '@/lib/auth';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,6 +11,7 @@ const errorText: Record<string, string> = {
   'rate-limited': 'Too many tries. Wait a minute and try again.',
   'bad-code': "That code didn't work. Check it or send a new one.",
   'send-failed': "Couldn't send the code. Try again.",
+  'delete-failed': "Couldn't delete your account. Try again.",
 };
 
 /**
@@ -26,6 +27,7 @@ const AccountSection = () => {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const signedIn = user.data?.email;
 
@@ -69,6 +71,50 @@ const AccountSection = () => {
           {busy ? 'Signing out' : 'Sign out'}
         </button>
         </div>
+
+        {!confirmDelete ? (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="mt-4 text-xs text-fg-muted underline-offset-4 hover:text-danger hover:underline"
+          >
+            Delete account
+          </button>
+        ) : (
+          <div role="alertdialog" aria-labelledby="delete-title" className="mt-4 rounded-lg border border-danger/40 bg-danger/5 p-3">
+            <p id="delete-title" className="text-sm font-semibold">Delete your account?</p>
+            <p className="mt-1 text-sm text-fg-muted">
+              Your profile, name and leaderboard spots go away, on every device. Past games stay in the game records but no longer show on any
+              profile. This can&apos;t be undone.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await deleteAccount();
+                    setConfirmDelete(false);
+                    setStep('email');
+                    setRightDrawerOpen(false);
+                    await router.push('/');
+                  })
+                }
+                className="h-9 rounded-lg bg-danger px-3 text-sm font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+              >
+                {busy ? 'Deleting' : 'Delete account'}
+              </button>
+              <button type="button" disabled={busy} onClick={() => setConfirmDelete(false)} className="h-9 rounded-lg border border-line px-3 text-sm font-medium hover:bg-fg/5">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {error && (
+          <p className="mt-2 text-xs text-danger" role="alert">
+            {error}
+          </p>
+        )}
       </section>
     );
   }

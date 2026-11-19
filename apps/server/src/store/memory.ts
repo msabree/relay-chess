@@ -5,6 +5,8 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
   const games = new Map<string, GameRecord>();
   const scores = new Map<string, Score>();
   const contacts: ContactMessage[] = [];
+  const retired = new Set<string>();
+  const retiredNames = new Set<string>();
   /** none by default; tests (or a dev) can push some */
   const announcements: AnnouncementDoc[] = [];
   const copy = <T>(v: T): T => structuredClone(v);
@@ -49,6 +51,21 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     },
     async saveContact(msg) {
       contacts.push(copy(msg));
+    },
+    async retirePlayers(ids) {
+      for (const id of ids) retired.add(id);
+    },
+    async retiredPlayers() {
+      return [...retired];
+    },
+    async retireName(key) {
+      retiredNames.add(key);
+    },
+    async retiredNames() {
+      return [...retiredNames];
+    },
+    async deleteScores(userIds) {
+      for (const [k, sc] of scores) if (userIds.includes(sc.userId)) scores.delete(k);
     },
     async liveAnnouncements(now) {
       return announcements
