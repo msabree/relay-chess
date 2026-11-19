@@ -4,16 +4,19 @@ import VerifiedMark from '@/components/VerifiedMark';
 import { initials } from '@/components/game/util';
 
 /** People you've teamed up with most. */
-const Partners = ({ profile }: { profile: Profile }) => (
+const Partners = ({ profile }: { profile: Profile }) => {
+  const partners = profile.partners;
+  if (!partners) return null; // only sent on your own profile
+  return (
   <section aria-labelledby="partners" className="flex flex-col gap-3.5">
     <h2 id="partners" className="text-lg font-semibold">
       Partners
     </h2>
-    {profile.partners.length === 0 ? (
+    {partners.length === 0 ? (
       <p className="text-sm text-fg-muted">Teammates show up here after a 2v2.</p>
     ) : (
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {profile.partners.map((t) => (
+        {partners.map((t) => (
           <li key={t.id}>
             <Link href={`/players/${t.id}`} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:bg-fg/5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-raised text-xs font-bold">{initials(t.name)}</span>
@@ -32,6 +35,7 @@ const Partners = ({ profile }: { profile: Profile }) => (
       </ul>
     )}
   </section>
-);
+  );
+};
 
 export default Partners;

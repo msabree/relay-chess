@@ -105,11 +105,19 @@ describe('profiles', () => {
     const pal = { id: 'p_pal', name: 'Sleepy Rook' };
     await game('r1', [me, pal], [{ id: 'p_x', name: 'X' }], 'white', 1000);
     await game('r2', [{ id: 'p_y', name: 'Y' }], [me, pal], 'white', 2000);
-    const r = await t.api(`/players/${g.user.id}`);
+    const r = await t.api(`/players/${g.user.id}`, { token: g.token });
     expect(r.status).toBe(200);
     expect(r.body.player).toEqual({ id: g.user.id, username: g.user.username });
     expect(r.body.record).toMatchObject({ wins: 1, losses: 1, draws: 0, games: 2 });
     expect(r.body.partners).toEqual([{ id: 'p_pal', name: 'Sleepy Rook', games: 2, wins: 1 }]);
+
+    // Anyone else (signed out, or another player) sees the profile without partners.
+    const other = await t.guest();
+    for (const token of [undefined, other.token]) {
+      const pub = await t.api(`/players/${g.user.id}`, token ? { token } : {});
+      expect(pub.body.record).toMatchObject({ games: 2 });
+      expect(pub.body).not.toHaveProperty('partners');
+    }
     expect(r.body.games.map((x: { roomId: string; outcome: string }) => [x.roomId, x.outcome])).toEqual([['r2', 'loss'], ['r1', 'win']]);
     expect(r.body.games[0]).toMatchObject({ side: 'black', team: ['Sleepy Rook'], opponents: ['Y'] });
   });

@@ -194,7 +194,10 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
 
   // ---- profiles ----
 
-  /** Public profile: name, check mark, tagline, link, record, recent games and partners. */
+  /**
+   * Profile: name, check mark, record and recent games are public.
+   * Partners are only for the player themselves (who you team up with is yours).
+   */
   app.get(
     '/players/:id',
     wrap(async (req, res) => {
@@ -224,7 +227,8 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
           partners.set(p.id, cur);
         }
       }
-      const info = await accounts.publicInfo([...partners.keys()]);
+      const owner = !!req.who && ids.includes(req.who.id);
+      const info = owner ? await accounts.publicInfo([...partners.keys()]) : new Map();
       res.json({
         player: {
           id: account?.playerId ?? id,
@@ -233,10 +237,14 @@ export function createHttpApp({ config, store, accounts, liveGames, playing }: H
         },
         // "100+" when we stopped counting: the list is capped
         record: { wins, losses, draws, games: games.length, capped: games.length === 100 },
-        partners: [...partners.values()]
-          .sort((a, b) => b.games - a.games)
-          .slice(0, 6)
-          .map((p) => (info.has(p.id) ? { ...p, verified: true } : p)),
+        ...(owner
+          ? {
+              partners: [...partners.values()]
+                .sort((a, b) => b.games - a.games)
+                .slice(0, 6)
+                .map((p) => (info.has(p.id) ? { ...p, verified: true } : p)),
+            }
+          : {}),
         games: games.slice(offset, offset + pageSize).map((g) => ({
           roomId: g.roomId,
           at: g.timestamp,

@@ -23,7 +23,8 @@ export interface ProfileGame {
 export interface Profile {
   player: PublicPlayer;
   record: { wins: number; losses: number; draws: number; games: number; capped: boolean };
-  partners: { id: string; name: string; games: number; wins: number; verified?: boolean }[];
+  /** Only on your own profile. */
+  partners?: { id: string; name: string; games: number; wins: number; verified?: boolean }[];
   games: ProfileGame[];
 }
 
