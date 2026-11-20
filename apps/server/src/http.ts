@@ -356,6 +356,21 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
     }),
   );
 
+  // ---- Plus (not launched: the hidden /pricing page collects interest) ----
+
+  const waitlistLimit = limiter(10, 60 * 60_000);
+  app.post(
+    '/plus/waitlist',
+    wrap(async (req, res) => {
+      if (!waitlistLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
+      if (req.body?.website) return res.json({ ok: true }); // hidden field: bots only
+      const email = z.string().trim().toLowerCase().max(200).pipe(z.email()).safeParse(req.body?.email);
+      if (!email.success) return res.status(400).json({ error: 'invalid-email' });
+      await store.joinPlusWaitlist(email.data, req.who?.id);
+      res.json({ ok: true });
+    }),
+  );
+
   app.use((_req, res) => res.status(404).json({ error: 'not-found' }));
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

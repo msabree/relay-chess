@@ -87,6 +87,8 @@ export interface Store {
   listScores(period: Period, key: string): Promise<Score[]>;
 
   saveContact(msg: ContactMessage): Promise<void>;
+  /** "Tell me when Plus launches". One entry per email (lower case); repeats are ignored. */
+  joinPlusWaitlist(email: string, playerId?: string): Promise<void>;
   /** Newest finished games any of these players were in. */
   gamesFor(userIds: string[], limit: number): Promise<GameRecord[]>;
   /** Live banners right now, in order. */

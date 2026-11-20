@@ -78,6 +78,19 @@ describe('contact captcha', () => {
   });
 });
 
+describe('plus waitlist', () => {
+  it('keeps one entry per email and ignores bots', async () => {
+    const g = await t.guest();
+    const join = (json: object, token?: string) => t.api('/plus/waitlist', { method: 'POST', json, ...(token ? { token } : {}) });
+    expect((await join({ email: 'nope' })).body).toEqual({ error: 'invalid-email' });
+    expect((await join({ email: ' Ann@Example.com ' }, g.token)).body).toEqual({ ok: true });
+    expect((await join({ email: 'ann@example.com' })).body).toEqual({ ok: true }); // again: still one entry
+    expect((await join({ email: 'bot@example.com', website: 'x' })).body).toEqual({ ok: true });
+    expect([...t.store.plusWaitlist.keys()]).toEqual(['ann@example.com']);
+    expect(t.store.plusWaitlist.get('ann@example.com')?.playerId).toBe(g.user.id);
+  });
+});
+
 describe('stats', () => {
   it('counts games played', async () => {
     expect((await t.api('/stats')).body).toEqual({ gamesPlayed: 0 });

@@ -21,6 +21,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const contact: Collection<ContactMessage> = db.collection('contact-us');
   const announcements: Collection<AnnouncementDoc> = db.collection('announcements');
   const retired: Collection<{ _id: string; at: Date }> = db.collection('retired_players');
+  const plusWaitlist: Collection<{ _id: string; playerId?: string; at: Date }> = db.collection('plus_waitlist');
   const retiredNames: Collection<{ _id: string; at: Date }> = db.collection('retired_names');
 
   // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
@@ -70,6 +71,9 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     },
     async saveContact(msg) {
       await contact.insertOne(msg);
+    },
+    async joinPlusWaitlist(email, playerId) {
+      await plusWaitlist.updateOne({ _id: email }, { $setOnInsert: { at: new Date(), ...(playerId ? { playerId } : {}) } }, { upsert: true });
     },
     async retirePlayers(ids) {
       if (!ids.length) return;

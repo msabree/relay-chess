@@ -25,3 +25,6 @@ export const contactUs = (
   captcha: { token: string; answer: string },
   website: string,
 ) => api.post('/contact', { ...fields, captcha, website });
+
+/** "Tell me when Plus launches" (hidden /pricing page). `website` is the bots-only field. */
+export const joinPlusWaitlist = (email: string, website: string) => api.post('/plus/waitlist', { email, website });
