@@ -1,12 +1,12 @@
 import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store } from './types';
 
 /** Everything in process memory. Default for local dev and tests. */
-export function createMemoryStore(): Store & { contacts: ContactMessage[]; announcements: AnnouncementDoc[]; plusWaitlist: Map<string, { playerId?: string; at: Date }> } {
+export function createMemoryStore(): Store & { contacts: ContactMessage[]; announcements: AnnouncementDoc[]; supporterWaitlist: Map<string, { playerId?: string; at: Date }> } {
   const games = new Map<string, GameRecord>();
   const scores = new Map<string, Score>();
   const contacts: ContactMessage[] = [];
   const retired = new Set<string>();
-  const plusWaitlist = new Map<string, { playerId?: string; at: Date }>();
+  const supporterWaitlist = new Map<string, { playerId?: string; at: Date }>();
   const retiredNames = new Set<string>();
   /** none by default; tests (or a dev) can push some */
   const announcements: AnnouncementDoc[] = [];
@@ -16,7 +16,7 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     kind: 'memory',
     contacts,
     announcements,
-    plusWaitlist,
+    supporterWaitlist,
     async saveGame(game) {
       if (!games.has(game.roomId)) games.set(game.roomId, copy(game));
     },
@@ -54,8 +54,8 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     async saveContact(msg) {
       contacts.push(copy(msg));
     },
-    async joinPlusWaitlist(email, playerId) {
-      if (!plusWaitlist.has(email)) plusWaitlist.set(email, { at: new Date(), ...(playerId ? { playerId } : {}) });
+    async joinSupporterWaitlist(email, playerId) {
+      if (!supporterWaitlist.has(email)) supporterWaitlist.set(email, { at: new Date(), ...(playerId ? { playerId } : {}) });
     },
     async retirePlayers(ids) {
       for (const id of ids) retired.add(id);
