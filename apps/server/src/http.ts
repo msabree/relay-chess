@@ -9,6 +9,7 @@ import type { Accounts } from './accounts';
 import type { Config } from './config';
 import { leaderboardPage, leaderboardPosition, PERIODS } from './leaderboard';
 import type { GameRecord, Store } from './store/types';
+import type { Supporters } from './supporters';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -30,9 +31,6 @@ function toAnnouncement(d: { id: string; text?: unknown; link?: unknown; linkTex
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-const me = (who: Identity) => ({ id: who.id, username: who.name, ...(who.guest ? {} : { verified: true }) });
-
-/** Social handles, without the @. Empty clears. */
 
 const wrap =
   (fn: (req: Request, res: Response) => Promise<unknown>): RequestHandler =>
@@ -65,9 +63,10 @@ export interface HttpDeps {
   retired: ReadonlySet<string>;
   /** retire a deleted account's player ids, and its username for good */
   retire: (ids: string[], username?: string | null) => Promise<void>;
+  supporters: Supporters;
 }
 
-export function createHttpApp({ config, store, accounts, liveGames, playing, retired, retire }: HttpDeps) {
+export function createHttpApp({ config, store, accounts, liveGames, playing, retired, retire, supporters }: HttpDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -75,6 +74,27 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
   app.use(cors({ origin: config.CORS_ORIGINS, exposedHeaders: ['set-auth-token'] }));
   // Better Auth reads its own bodies: mount it before express.json
   app.all('/api/auth/*', toNodeHandler(accounts.auth));
+
+  /**
+   * Stripe webhook. Needs the raw body for the signature, so it's mounted
+   * before express.json. Each event makes us re-read the subscription from
+   * Stripe, so repeats and out-of-order events are harmless.
+   */
+  app.post(
+    '/stripe/webhook',
+    express.raw({ type: 'application/json', limit: '1mb' }),
+    wrap(async (req, res) => {
+      if (!supporters.enabled) return res.status(404).json({ error: 'not-found' });
+      let event;
+      try {
+        event = supporters.verify(req.body as Buffer, String(req.headers['stripe-signature'] ?? ''));
+      } catch {
+        return res.status(400).json({ error: 'bad-signature' });
+      }
+      await supporters.handle(event); // a throw is a 500, and Stripe retries
+      res.json({ received: true });
+    }),
+  );
   app.use(express.json({ limit: '1mb' }));
 
   // Identify the caller if a token is present. Routes decide whether it's required.
@@ -85,6 +105,15 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
     if (who && !retired.has(who.id)) req.who = who;
     next();
   });
+  /** Your player as the web app sees it. Supporter status is live, not in the token. */
+  const me = (who: Identity) => ({
+    id: who.id,
+    username: who.name,
+    ...(who.guest ? {} : { verified: true }),
+    ...(!who.guest && supporters.isSupporter(who.id) ? { supporter: true } : {}),
+  });
+  /** check marks for a player id that has an account */
+  const badges = (id: string) => (supporters.isSupporter(id) ? { verified: true, supporter: true } : { verified: true });
   const requireAuth: RequestHandler = (req, res, next) => (req.who ? next() : res.status(401).json({ error: 'unauthorized' }));
 
   const contactLimit = limiter(5, 60 * 60_000);
@@ -259,7 +288,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
         player: {
           id: account?.playerId ?? id,
           username: name,
-          ...(account ? { verified: true } : {}),
+          ...(account ? badges(account.playerId ?? id) : {}),
         },
         // "100+" when we stopped counting: the list is capped
         record: { wins, losses, draws, games: games.length, capped: games.length === 100 },
@@ -268,7 +297,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
               partners: [...partners.values()]
                 .sort((a, b) => b.games - a.games)
                 .slice(0, 6)
-                .map((p) => (info.has(p.id) ? { ...p, verified: true } : p)),
+                .map((p) => (info.has(p.id) ? { ...p, ...badges(p.id) } : p)),
             }
           : {}),
         games: games.slice(offset, offset + pageSize).map((g) => ({
@@ -320,7 +349,7 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
         ...page,
         rows: page.rows.map((r) => {
           const a = info.get(r.userId);
-          return a ? { ...r, username: a.username ?? r.username, verified: true } : r;
+          return a ? { ...r, username: a.username ?? r.username, ...badges(r.userId) } : r;
         }),
       });
     }),
@@ -356,18 +385,77 @@ export function createHttpApp({ config, store, accounts, liveGames, playing, ret
     }),
   );
 
-  // ---- Supporters (card checkout not built yet: the hidden /support page collects interest) ----
+  // ---- supporters (Stripe memberships; every feature stays free) ----
 
-  const waitlistLimit = limiter(10, 60 * 60_000);
-  app.post(
-    '/support/waitlist',
+  const supportUrl = `${config.WEB_URL}/support`;
+  /** Signed-in players only: memberships belong to accounts, not guests. */
+  const requireAccount: RequestHandler = (req, res, next) =>
+    req.who && !req.who.guest ? next() : res.status(401).json({ error: req.who ? 'sign-in-required' : 'unauthorized' });
+  const billingLimit = limiter(20, 60 * 60_000);
+
+  /** Is supporting switched on, and your membership if you're signed in. */
+  app.get(
+    '/support',
     wrap(async (req, res) => {
-      if (!waitlistLimit(req.ip ?? '')) return res.status(429).json({ error: 'rate-limited' });
-      if (req.body?.website) return res.json({ ok: true }); // hidden field: bots only
-      const email = z.string().trim().toLowerCase().max(200).pipe(z.email()).safeParse(req.body?.email);
-      if (!email.success) return res.status(400).json({ error: 'invalid-email' });
-      await store.joinSupporterWaitlist(email.data, req.who?.id);
+      const mine = req.who && !req.who.guest ? await supporters.status(req.who.id) : null;
+      res.json({ enabled: supporters.enabled, ...(req.who && !req.who.guest ? { membership: mine } : {}) });
+    }),
+  );
+
+  /** Start Stripe Checkout for a plan. Already a supporter: manage it in the portal instead. */
+  app.post(
+    '/support/checkout',
+    requireAccount,
+    wrap(async (req, res) => {
+      if (!supporters.enabled) return res.status(503).json({ error: 'support-off' });
+      if (!billingLimit(req.who!.id)) return res.status(429).json({ error: 'rate-limited' });
+      const body = z.object({ plan: z.enum(['monthly', 'yearly']) }).safeParse(req.body);
+      if (!body.success) return res.status(400).json({ error: 'invalid-input' });
+      const { account } = await accounts.playerIds(req.who!.id);
+      const out = await supporters.checkout(req.who!.id, body.data.plan, account?.email, supportUrl);
+      if ('already' in out) return res.status(409).json({ error: 'already-supporter' });
+      res.json({ url: out.url });
+    }),
+  );
+
+  /** Stripe's Customer Portal: change plan, update the card, cancel, see receipts. */
+  app.post(
+    '/support/portal',
+    requireAccount,
+    wrap(async (req, res) => {
+      if (!billingLimit(req.who!.id)) return res.status(429).json({ error: 'rate-limited' });
+      const url = await supporters.portal(req.who!.id, supportUrl);
+      if (!url) return res.status(404).json({ error: 'no-membership' });
+      res.json({ url });
+    }),
+  );
+
+  let wall: { at: number; list: { id: string; username: string }[] } = { at: 0, list: [] };
+
+  /** Show or hide yourself on the supporters list. */
+  app.patch(
+    '/support/me',
+    requireAccount,
+    wrap(async (req, res) => {
+      const body = z.object({ showOnWall: z.boolean() }).strict().safeParse(req.body);
+      if (!body.success) return res.status(400).json({ error: 'invalid-input' });
+      if (!(await supporters.setShowOnWall(req.who!.id, body.data.showOnWall))) return res.status(404).json({ error: 'no-membership' });
+      wall.at = 0;
       res.json({ ok: true });
+    }),
+  );
+
+  /** The supporters list: active supporters who opted in, by current name. Cached briefly. */
+  app.get(
+    '/supporters',
+    wrap(async (_req, res) => {
+      if (Date.now() - wall.at > 60_000) {
+        const ids = supporters.wall().filter((id) => !retired.has(id));
+        const info = await accounts.publicInfo(ids);
+        const list = ids.flatMap((id) => (info.get(id)?.username ? [{ id, username: info.get(id)!.username! }] : []));
+        wall = { at: Date.now(), list: list.sort((a, b) => a.username.localeCompare(b.username)) };
+      }
+      res.json({ supporters: wall.list.filter((s) => supporters.isSupporter(s.id)) });
     }),
   );
 

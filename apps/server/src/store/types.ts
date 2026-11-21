@@ -52,6 +52,22 @@ export interface ContactMessage {
   sentAt: Date;
 }
 
+/** A supporter membership (Stripe subscription), keyed by the account's player id. */
+export interface Supporter {
+  playerId: string;
+  customerId: string;
+  subscriptionId: string;
+  plan: 'monthly' | 'yearly' | null;
+  /** Stripe's subscription status */
+  status: string;
+  /** perks show until this time */
+  until: Date;
+  cancelAtPeriodEnd: boolean;
+  /** on the public supporters list (opt-in) */
+  showOnWall: boolean;
+  since: Date;
+}
+
 /**
  * A banner document, as you'd write it in the `announcements` collection:
  *   { text: "We're live on Product Hunt", link: "https://...", linkText: "Upvote us",
@@ -87,8 +103,12 @@ export interface Store {
   listScores(period: Period, key: string): Promise<Score[]>;
 
   saveContact(msg: ContactMessage): Promise<void>;
-  /** "Tell me when card checkout is ready" (supporters). One entry per email (lower case); repeats are ignored. */
-  joinSupporterWaitlist(email: string, playerId?: string): Promise<void>;
+  /** Supporter memberships, one per player. */
+  getSupporter(playerId: string): Promise<Supporter | null>;
+  /** Create or update; `since` is set on first save only. */
+  saveSupporter(playerId: string, patch: Partial<Omit<Supporter, 'playerId' | 'since'>>): Promise<void>;
+  listSupporters(): Promise<Supporter[]>;
+  deleteSupporter(playerId: string): Promise<void>;
   /** Newest finished games any of these players were in. */
   gamesFor(userIds: string[], limit: number): Promise<GameRecord[]>;
   /** Live banners right now, in order. */

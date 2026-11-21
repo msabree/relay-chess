@@ -56,7 +56,7 @@ export default function PlayerPage() {
               <div className="min-w-0 flex-1">
                 <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
                   <span className="truncate">{p.player.username}</span>
-                  {p.player.verified && <VerifiedMark size={18} />}
+                  {p.player.verified && <VerifiedMark size={18} supporter={p.player.supporter} />}
                 </h1>
                 <p className="mt-1 text-sm text-fg-muted">
                   {total} {p.record.games === 1 ? 'game' : 'games'} · {p.record.wins} {p.record.wins === 1 ? 'win' : 'wins'} · {p.record.losses}{' '}

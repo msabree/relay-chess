@@ -1,12 +1,12 @@
-import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store } from './types';
+import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store, Supporter } from './types';
 
 /** Everything in process memory. Default for local dev and tests. */
-export function createMemoryStore(): Store & { contacts: ContactMessage[]; announcements: AnnouncementDoc[]; supporterWaitlist: Map<string, { playerId?: string; at: Date }> } {
+export function createMemoryStore(): Store & { contacts: ContactMessage[]; announcements: AnnouncementDoc[]; supporters: Map<string, Supporter> } {
   const games = new Map<string, GameRecord>();
   const scores = new Map<string, Score>();
   const contacts: ContactMessage[] = [];
   const retired = new Set<string>();
-  const supporterWaitlist = new Map<string, { playerId?: string; at: Date }>();
+  const supporters = new Map<string, Supporter>();
   const retiredNames = new Set<string>();
   /** none by default; tests (or a dev) can push some */
   const announcements: AnnouncementDoc[] = [];
@@ -16,7 +16,7 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     kind: 'memory',
     contacts,
     announcements,
-    supporterWaitlist,
+    supporters,
     async saveGame(game) {
       if (!games.has(game.roomId)) games.set(game.roomId, copy(game));
     },
@@ -54,8 +54,20 @@ export function createMemoryStore(): Store & { contacts: ContactMessage[]; annou
     async saveContact(msg) {
       contacts.push(copy(msg));
     },
-    async joinSupporterWaitlist(email, playerId) {
-      if (!supporterWaitlist.has(email)) supporterWaitlist.set(email, { at: new Date(), ...(playerId ? { playerId } : {}) });
+    async getSupporter(playerId) {
+      const s = supporters.get(playerId);
+      return s ? copy(s) : null;
+    },
+    async saveSupporter(playerId, patch) {
+      const cur = supporters.get(playerId);
+      const base: Supporter = cur ?? { playerId, customerId: '', subscriptionId: '', plan: null, status: '', until: new Date(0), cancelAtPeriodEnd: false, showOnWall: false, since: new Date() };
+      supporters.set(playerId, { ...base, ...copy(patch), playerId, since: base.since });
+    },
+    async listSupporters() {
+      return [...supporters.values()].map(copy);
+    },
+    async deleteSupporter(playerId) {
+      supporters.delete(playerId);
     },
     async retirePlayers(ids) {
       for (const id of ids) retired.add(id);

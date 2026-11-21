@@ -14,6 +14,12 @@ const schema = z.object({
   /** Sends sign-in codes. Leave empty to print codes to the server log instead (local dev). */
   RESEND_API_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
   EMAIL_FROM: z.string().default('Relay Chess <play@relaychess.com>'),
+  /** Supporter memberships (Stripe). Leave any of these empty and supporting is switched off. */
+  STRIPE_SECRET_KEY: z.string().optional().transform((v) => (v ? v : undefined)),
+  STRIPE_WEBHOOK_SECRET: z.string().optional().transform((v) => (v ? v : undefined)),
+  /** Price ids (price_...) for the two plans */
+  STRIPE_PRICE_MONTHLY: z.string().optional().transform((v) => (v ? v : undefined)),
+  STRIPE_PRICE_YEARLY: z.string().optional().transform((v) => (v ? v : undefined)),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')

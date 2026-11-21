@@ -42,6 +42,8 @@ export interface LeaderboardRow {
     gamesPlayed: number;
     /** signed-in player: grey check */
     verified?: boolean;
+    /** supporter: blue check */
+    supporter?: boolean;
 }
 
 export interface Leaderboard {

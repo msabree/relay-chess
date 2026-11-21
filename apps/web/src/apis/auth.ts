@@ -25,6 +25,3 @@ export const contactUs = (
   captcha: { token: string; answer: string },
   website: string,
 ) => api.post('/contact', { ...fields, captcha, website });
-
-/** "Tell me when card checkout is ready" (hidden /support page). `website` is the bots-only field. */
-export const joinSupporterWaitlist = (email: string, website: string) => api.post('/support/waitlist', { email, website });

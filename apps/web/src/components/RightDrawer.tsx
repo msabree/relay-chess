@@ -5,18 +5,34 @@ import { useUser } from '@/hooks/useUser';
 import { isAxiosError } from 'axios';
 import { renamePlayer } from '@/apis/auth';
 import AccountSection from '@/components/AccountSection';
-import { BOARD_COLOR_SCHEMES } from '@/constants';
+import { ARENAS, BOARD_COLOR_SCHEMES } from '@/constants';
+import VerifiedMark from '@/components/VerifiedMark';
+import { useSupport } from '@/hooks/useSupport';
+import SupporterControls from '@/components/SupporterControls';
 import { USERNAME, USERNAME_HINT } from '@relay-chess/game';
-import { setBoardColor, useBoardColor } from '@/lib/settings';
+import { setArena, setBoardColor, useArena, useBoardColor } from '@/lib/settings';
 
 const NICKNAME = /^[\p{L}\p{N}_ -]{2,20}$/u;
-const LABELS: Record<string, string> = { slate: 'Slate', 'blue-white': 'Blue', 'green-white': 'Green', 'red-white': 'Red' };
+const LABELS: Record<string, string> = {
+  slate: 'Slate',
+  'blue-white': 'Blue',
+  'green-white': 'Green',
+  'red-white': 'Red',
+  walnut: 'Walnut',
+  lavender: 'Lavender',
+  coral: 'Coral',
+  midnight: 'Midnight',
+};
 
 /** Settings: sign in, your nickname, theme and board colors. */
 const SettingsDrawer = () => {
   const { rightDrawerOpen: open, setRightDrawerOpen: setOpen } = useContext(AppContext);
   const user = useUser();
   const board = useBoardColor();
+  const arena = useArena();
+  // Supporter extras only show up for supporters; nobody else sees them.
+  const support = useSupport();
+  const supporter = !!support.data?.membership?.active;
   const { theme, setTheme } = useTheme();
   const [name, setName] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'taken'>('idle');
@@ -142,7 +158,7 @@ const SettingsDrawer = () => {
           <div>
             <h3 id="board-label" className="text-sm font-semibold">Board</h3>
             <div role="radiogroup" aria-labelledby="board-label" className="mt-3 grid grid-cols-4 gap-2">
-              {BOARD_COLOR_SCHEMES.map((s) => {
+              {BOARD_COLOR_SCHEMES.filter((s) => !s.supporter || supporter).map((s) => {
                 const on = board.value === s.value;
                 return (
                   <button
@@ -159,12 +175,54 @@ const SettingsDrawer = () => {
                       <span style={{ background: s.dark }} />
                       <span style={{ background: s.light }} />
                     </span>
-                    {LABELS[s.value] ?? s.value}
+                    <span className="flex items-center gap-1">
+                      {LABELS[s.value] ?? s.value}
+                      {s.supporter && <VerifiedMark size={10} supporter decorative />}
+                    </span>
                   </button>
                 );
               })}
             </div>
+            {arena && <p className="mt-2 text-xs text-fg-subtle">Your arena sets the board in games.</p>}
           </div>
+
+          {supporter && (
+            <div>
+              <h3 id="arena-label" className="flex items-center gap-1.5 text-sm font-semibold">
+                Arena <VerifiedMark size={12} supporter decorative />
+              </h3>
+              <p className="mt-1 text-sm text-fg-muted">A look for your games. Only you see it.</p>
+              <div role="radiogroup" aria-labelledby="arena-label" className="mt-3 grid grid-cols-2 gap-2">
+                {[{ value: '', label: 'None', board: null, backdrop: '' }, ...ARENAS].map((a) => {
+                  const on = (arena?.value ?? '') === a.value;
+                  return (
+                    <button
+                      key={a.value || 'none'}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setArena(a.value)}
+                      style={a.backdrop ? { backgroundImage: a.backdrop } : undefined}
+                      className={`flex h-14 items-center gap-2 rounded-lg border px-3 text-left text-sm font-medium ${on ? 'border-accent ring-1 ring-accent' : 'border-line hover:border-fg/30'}`}
+                    >
+                      {a.board && (
+                        <span className="grid h-7 w-7 shrink-0 grid-cols-2 overflow-hidden rounded" aria-hidden="true">
+                          <span style={{ background: a.board.light }} />
+                          <span style={{ background: a.board.dark }} />
+                          <span style={{ background: a.board.dark }} />
+                          <span style={{ background: a.board.light }} />
+                        </span>
+                      )}
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-5">
+                <SupporterControls membership={support.data!.membership!} />
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </div>

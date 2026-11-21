@@ -109,7 +109,7 @@ const Leaderboard = (_props: { showHeader?: boolean; showPagination?: boolean })
                         <Link href={`/players/${r.userId}`} className="font-medium underline-offset-4 hover:underline">
                           {r.username}
                         </Link>
-                        {r.verified && <VerifiedMark />}
+                        {r.verified && <VerifiedMark supporter={r.supporter} />}
                         {isMe && <span className="ml-1 rounded bg-accent px-1.5 text-[10px] font-semibold uppercase text-accent-fg">you</span>}
                       </div>
                     </td>

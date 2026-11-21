@@ -4,6 +4,7 @@ export interface PublicPlayer {
   id: string;
   username: string;
   verified?: boolean;
+  supporter?: boolean;
 }
 
 export interface ProfileGame {
@@ -24,7 +25,7 @@ export interface Profile {
   player: PublicPlayer;
   record: { wins: number; losses: number; draws: number; games: number; capped: boolean };
   /** Only on your own profile. */
-  partners?: { id: string; name: string; games: number; wins: number; verified?: boolean }[];
+  partners?: { id: string; name: string; games: number; wins: number; verified?: boolean; supporter?: boolean }[];
   games: ProfileGame[];
 }
 

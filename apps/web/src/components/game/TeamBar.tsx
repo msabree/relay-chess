@@ -75,7 +75,7 @@ const TeamBar = ({ color, compact = false }: { color: Color; compact?: boolean }
                     {initials(p.name)}
                   </span>
                   <span className={compact && i > 0 ? 'sr-only' : 'truncate'}>{isMe ? 'You' : p.name}</span>
-                  {p.verified && !(compact && i > 0) && <PlayerCheck id={p.id} name={p.name} size={11} />}
+                  {p.verified && !(compact && i > 0) && <PlayerCheck id={p.id} name={p.name} size={11} supporter={p.supporter} />}
                   {tag && <span className="hidden text-[10px] uppercase tracking-wider opacity-70 sm:inline">{tag}</span>}
                   {!p.connected && <span className="text-[10px] uppercase tracking-wider opacity-70">away</span>}
                 </span>

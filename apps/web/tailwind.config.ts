@@ -31,6 +31,7 @@ const config = {
         },
         danger: token('danger'),
         success: token('success'),
+        supporter: token('supporter'),
 
         // Brand scales for one-off use
         yellow: {

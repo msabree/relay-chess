@@ -30,7 +30,7 @@ export function createGame(opts: {
   maxPerTeam?: number;
   teams?: Partial<Record<Color, Seatee[]>>;
 }): GameState {
-  const seat = (p: Seatee): Player => ({ id: p.id, name: p.name, connected: true, ...(p.verified ? { verified: true } : {}) });
+  const seat = (p: Seatee): Player => ({ id: p.id, name: p.name, connected: true, ...(p.verified ? { verified: true } : {}), ...(p.supporter ? { supporter: true } : {}) });
   return {
     id: opts.id,
     maxPerTeam: opts.maxPerTeam ?? DEFAULT_MAX_PER_TEAM,
@@ -81,7 +81,7 @@ export function join(state: GameState, player: Seatee, color: Color): Outcome {
   if (state.teams[color].length >= state.maxPerTeam) return { ok: false, error: 'team-full' };
   const s = clone(state);
   s.teams[other(color)] = s.teams[other(color)].filter((p) => p.id !== player.id);
-  s.teams[color].push({ id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}) });
+  s.teams[color].push({ id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}), ...(player.supporter ? { supporter: true } : {}) });
   return ok(s);
 }
 
@@ -98,7 +98,7 @@ export function takeSeat(state: GameState, player: Seatee, seatOf: string): Outc
     const i = s.teams[c].findIndex((p) => p.id === seatOf);
     if (i < 0) continue;
     if (s.teams[c][i]!.connected) return { ok: false, error: 'seat-taken' };
-    s.teams[c][i] = { id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}) };
+    s.teams[c][i] = { id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}), ...(player.supporter ? { supporter: true } : {}) };
     return ok(s);
   }
   return { ok: false, error: 'not-seated' };

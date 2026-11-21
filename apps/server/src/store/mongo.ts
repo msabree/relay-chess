@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Document } from 'mongodb';
-import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store } from './types';
+import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store, Supporter } from './types';
 
 const strip = <T extends Document>(d: T | null) => {
   if (!d) return null;
@@ -21,7 +21,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const contact: Collection<ContactMessage> = db.collection('contact-us');
   const announcements: Collection<AnnouncementDoc> = db.collection('announcements');
   const retired: Collection<{ _id: string; at: Date }> = db.collection('retired_players');
-  const supporterWaitlist: Collection<{ _id: string; playerId?: string; at: Date }> = db.collection('supporter_waitlist');
+  const supporters: Collection<Omit<Supporter, 'playerId'> & { _id: string }> = db.collection('supporters');
   const retiredNames: Collection<{ _id: string; at: Date }> = db.collection('retired_names');
 
   // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
@@ -72,8 +72,22 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
     async saveContact(msg) {
       await contact.insertOne(msg);
     },
-    async joinSupporterWaitlist(email, playerId) {
-      await supporterWaitlist.updateOne({ _id: email }, { $setOnInsert: { at: new Date(), ...(playerId ? { playerId } : {}) } }, { upsert: true });
+    async getSupporter(playerId) {
+      const d = await supporters.findOne({ _id: playerId });
+      if (!d) return null;
+      const { _id, ...rest } = d;
+      return { ...rest, playerId: _id };
+    },
+    async saveSupporter(playerId, patch) {
+      const defaults = { customerId: '', subscriptionId: '', plan: null, status: '', until: new Date(0), cancelAtPeriodEnd: false, showOnWall: false };
+      const onInsert = Object.fromEntries(Object.entries(defaults).filter(([k]) => !(k in patch)));
+      await supporters.updateOne({ _id: playerId }, { $set: patch, $setOnInsert: { ...onInsert, since: new Date() } }, { upsert: true });
+    },
+    async listSupporters() {
+      return (await supporters.find({}).toArray()).map(({ _id, ...rest }) => ({ ...rest, playerId: _id }));
+    },
+    async deleteSupporter(playerId) {
+      await supporters.deleteOne({ _id: playerId });
     },
     async retirePlayers(ids) {
       if (!ids.length) return;

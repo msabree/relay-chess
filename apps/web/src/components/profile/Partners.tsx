@@ -23,7 +23,7 @@ const Partners = ({ profile }: { profile: Profile }) => {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
                   {t.name}
-                  {t.verified && <VerifiedMark size={12} />}
+                  {t.verified && <VerifiedMark size={12} supporter={t.supporter} />}
                 </span>
                 <span className="text-xs text-fg-muted">
                   {t.games} {t.games === 1 ? 'game' : 'games'} together · {t.wins} {t.wins === 1 ? 'win' : 'wins'}

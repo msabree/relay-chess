@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
 import VerifiedMark from '@/components/VerifiedMark';
+import { useIsSupporter } from '@/hooks/useSupport';
 import { initials } from '@/components/game/util';
 import { signOut } from '@/lib/auth';
 
@@ -11,6 +12,7 @@ const AccountMenu = ({ id, name }: { id: string; name: string }) => {
   const { setRightDrawerOpen } = useContext(AppContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const supporter = useIsSupporter();
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ const AccountMenu = ({ id, name }: { id: string; name: string }) => {
       >
         <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-accent-fg">{initials(name)}</span>
         <span className="hidden max-w-[160px] truncate text-sm font-medium sm:inline">{name}</span>
-        <VerifiedMark size={13} className="hidden sm:inline-block" decorative />
+        <VerifiedMark size={13} className="hidden sm:inline-block" supporter={supporter} decorative />
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-fg-muted" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>

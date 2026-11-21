@@ -33,7 +33,7 @@ const RoomChat = () => {
               />
               <span className={`inline-flex shrink-0 items-center gap-1 self-center font-semibold ${m.userId === userId ? 'text-accent-ink' : ''}`}>
                 {m.userId === userId ? 'You' : m.name}
-                {m.verified && m.userId !== userId && <PlayerCheck id={m.userId} name={m.name} size={11} />}
+                {m.verified && m.userId !== userId && <PlayerCheck id={m.userId} name={m.name} size={11} supporter={m.supporter} />}
               </span>
               <span className="min-w-0 break-words text-fg-muted">{m.text}</span>
             </li>

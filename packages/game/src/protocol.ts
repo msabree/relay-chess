@@ -12,12 +12,14 @@ export interface ChatMessage {
   text: string;
   at: number;
   verified?: true;
+  supporter?: true;
 }
 
 export interface Spectator {
   id: string;
   name: string;
   verified?: true;
+  supporter?: true;
 }
 
 export interface RoomSnapshot {

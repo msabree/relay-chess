@@ -44,7 +44,7 @@ const S = {
   partyQueue: z.object({ partyId: z.string().regex(PARTY_ID), timeControl: queueTimeControl }),
 };
 
-export function attachRealtime(io: IO, deps: { config: Config; store: Store; retired?: ReadonlySet<string>; abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number }) {
+export function attachRealtime(io: IO, deps: { config: Config; store: Store; retired?: ReadonlySet<string>; isSupporter?: (playerId: string) => boolean; abandonMs?: number; lobbyMs?: number; flushMs?: number; liveFlushMs?: number }) {
   const { config, store } = deps;
   const online = new Map<string, number>();
   let statsDirty = false;
@@ -57,6 +57,7 @@ export function attachRealtime(io: IO, deps: { config: Config; store: Store; ret
     store,
     abandonMs: deps.abandonMs,
     lobbyMs: deps.lobbyMs,
+    isSupporter: deps.isSupporter,
     // Small patches by default; the whole room only when a patch can't say it.
     onState: (r) => {
       const patch = rooms.patch(r);
