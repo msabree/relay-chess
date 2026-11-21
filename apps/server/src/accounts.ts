@@ -1,3 +1,4 @@
+import { toUsername, USERNAME } from '@relay-chess/game';
 import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
@@ -44,7 +45,8 @@ export function resendMailer(config: Config): Mailer {
 
 const MODELS = { user: 'auth_users', session: 'auth_sessions', account: 'auth_accounts', verification: 'auth_verifications' };
 
-export function createAccounts(config: Config, db: Db | undefined, mail: Mailer) {
+/** `nameRetired`: lower-case usernames of deleted accounts, which stay taken for good. */
+export function createAccounts(config: Config, db: Db | undefined, mail: Mailer, nameRetired: (key: string) => boolean = () => false) {
   const auth = betterAuth({
     secret: config.AUTH_SECRET,
     baseURL: config.SERVER_URL ?? `http://localhost:${config.PORT}`,
@@ -61,6 +63,10 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
         username: { type: 'string', required: false, input: false },
         /** lower case, for uniqueness */
         usernameKey: { type: 'string', required: false, input: false },
+        /** guest ids from other devices: their past games count as yours */
+        linkedPlayerIds: { type: 'string[]', required: false, input: false },
+        /** set once the player has chosen their username after signing up */
+        namePicked: { type: 'boolean', required: false, input: false },
       },
     },
     session: { modelName: MODELS.session, expiresIn: 60 * 60 * 24 * 90 },
@@ -79,7 +85,14 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     ],
   });
 
-  type AccountUser = { id: string; email: string; playerId?: string | null; username?: string | null };
+  type AccountUser = {
+    id: string;
+    email: string;
+    playerId?: string | null;
+    username?: string | null;
+    linkedPlayerIds?: string[] | null;
+    namePicked?: boolean | null;
+  };
   const ctx = () => auth.$context;
 
   async function findByName(name: string): Promise<AccountUser | null> {
@@ -92,19 +105,46 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
     return adapter.findOne<AccountUser>({ model: 'user', where: [{ field: 'playerId', value: playerId }] });
   }
 
-  async function update(userId: string, data: Partial<AccountUser> & { usernameKey?: string }) {
+  /**
+   * Accounts that own any of these player ids, as their main player or a
+   * guest they linked by signing in on another device. "contains" works on
+   * array fields in both the Mongo and memory adapters; it can match a
+   * substring in Mongo, so membership is checked again here.
+   */
+  async function ownersOf(playerIds: string[]): Promise<Map<string, AccountUser>> {
+    const out = new Map<string, AccountUser>();
+    if (!playerIds.length) return out;
+    const { adapter } = await ctx();
+    const users = await adapter.findMany<AccountUser>({
+      model: 'user',
+      where: [
+        { field: 'playerId', operator: 'in', value: playerIds, connector: 'OR' },
+        ...playerIds.map((id) => ({ field: 'linkedPlayerIds', operator: 'contains' as const, value: id, connector: 'OR' as const })),
+      ],
+    });
+    for (const u of users) {
+      for (const id of [u.playerId, ...(u.linkedPlayerIds ?? [])]) if (id && playerIds.includes(id)) out.set(id, u);
+    }
+    return out;
+  }
+
+  async function update(userId: string, data: Partial<Omit<AccountUser, 'id'>> & { usernameKey?: string }) {
     const { internalAdapter } = await ctx();
     await internalAdapter.updateUser(userId, data);
   }
 
   /** A free name based on `base`: "Quiet Rook", else "Quiet Rook 2", "Quiet Rook 3"… */
-  async function freeName(base: string): Promise<string> {
-    if (!(await findByName(base))) return base;
+  /** Held by an account, or by one that was deleted. */
+  const held = async (name: string) => nameRetired(name.toLowerCase()) || !!(await findByName(name));
+
+  async function freeName(raw: string): Promise<string> {
+    const base = toUsername(raw);
+    if (!(await held(base))) return base;
     for (let n = 2; n < 1000; n++) {
-      const name = `${base.slice(0, 20 - String(n).length - 1)} ${n}`;
-      if (!(await findByName(name))) return name;
+      const name = `${base.slice(0, 20 - String(n).length)}${n}`;
+      if (!(await held(name))) return name;
     }
-    return newGuest().name;
+    return (toUsername(newGuest().name).slice(0, 16) + Date.now().toString(36).slice(-4));
   }
 
   return {
@@ -122,7 +162,14 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
      * scores (the name gets a number if an account already has it).
      */
     async playerFor(user: AccountUser, guest: Identity | null): Promise<Identity> {
-      if (user.playerId && user.username) return { id: user.playerId, name: user.username, guest: false };
+      if (user.playerId && user.username) {
+        // Signing in on another device: that guest's games become yours too.
+        const linked = user.linkedPlayerIds ?? [];
+        if (guest?.guest && guest.id !== user.playerId && !linked.includes(guest.id) && !(await findByPlayer(guest.id))) {
+          await update(user.id, { linkedPlayerIds: [...linked, guest.id].slice(-20) });
+        }
+        return { id: user.playerId, name: user.username, guest: false };
+      }
       const base = guest?.guest ? guest : newGuest();
       // a guest token whose id already belongs to an account can't be claimed twice
       const id = guest?.guest && !(await findByPlayer(base.id)) ? base.id : newGuest().id;
@@ -133,14 +180,42 @@ export function createAccounts(config: Config, db: Db | undefined, mail: Mailer)
 
     /** Is this name held by an account other than this player's? */
     async nameTaken(name: string, playerId: string): Promise<boolean> {
+      if (nameRetired(name.toLowerCase())) return true;
       const owner = await findByName(name);
       return !!owner && owner.playerId !== playerId;
+    },
+
+    /** Every player id whose games belong to this player (theirs plus linked guests). */
+    async playerIds(playerId: string): Promise<{ ids: string[]; account: AccountUser | null }> {
+      const account = (await ownersOf([playerId])).get(playerId) ?? null;
+      if (!account?.playerId) return { ids: [playerId], account: null };
+      return { ids: [account.playerId, ...(account.linkedPlayerIds ?? [])], account };
+    },
+
+    /** Public account info (check mark, tagline, link) for these players. */
+    async publicInfo(playerIds: string[]): Promise<Map<string, { username?: string }>> {
+      const out = new Map<string, { username?: string }>();
+      for (const [id, u] of await ownersOf(playerIds)) {
+        out.set(id, u.username ? { username: u.username } : {});
+      }
+      return out;
+    },
+
+    /** Has this account chosen a valid username yet? New accounts, and older ones with spaces in their name, must. */
+    needsName: (user: AccountUser) => !user.namePicked || !USERNAME.test(user.username ?? ''),
+
+    /** Delete an account: its sessions, sign-in methods and the user (which frees the name). */
+    async remove(user: AccountUser) {
+      const { internalAdapter } = await ctx();
+      await internalAdapter.deleteUserSessions(user.id);
+      await internalAdapter.deleteAccounts(user.id);
+      await internalAdapter.deleteUser(user.id);
     },
 
     /** Keep an account's reserved name in step with a rename. */
     async rename(playerId: string, name: string) {
       const owner = await findByPlayer(playerId);
-      if (owner) await update(owner.id, { username: name, usernameKey: name.toLowerCase() });
+      if (owner) await update(owner.id, { username: name, usernameKey: name.toLowerCase(), namePicked: true });
     },
   };
 }

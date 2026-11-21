@@ -9,7 +9,6 @@ import { router } from 'expo-router';
 import React, { useContext, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Crowd, { MuteSpectators } from './Crowd';
-import DeployBanner from './DeployBanner';
 import GameActions from './GameActions';
 import MoveList from './MoveList';
 import RoomChat from './RoomChat';
@@ -71,7 +70,6 @@ export default function GameScreen() {
 
   return (
     <View style={{ gap: 8 }}>
-      <DeployBanner />
       <TeamBar color={top} />
       <View>
         <ChessGame />

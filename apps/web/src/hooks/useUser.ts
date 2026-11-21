@@ -11,7 +11,12 @@ export const useUser = () => {
     'player',
     async () => {
       const { user } = await ensurePlayer();
-      return { _id: user.id, username: user.username, ...(user.email ? { email: user.email } : {}) };
+      return {
+        _id: user.id,
+        username: user.username,
+        ...(user.email ? { email: user.email, verified: true } : {}),
+        ...(user.needsName ? { needsName: true } : {}),
+      };
     },
     { refetchOnWindowFocus: false, staleTime: Infinity },
   );

@@ -42,6 +42,8 @@ const SPECTATOR_SAMPLE = 20;
 const TOP_GAMES = 5;
 const MAX_PLAYERS = 8;
 
+
+/** A player as rooms see them: signed-in players carry the grey check. */
 export interface Room {
   id: string;
   isPrivate: boolean;
@@ -95,6 +97,8 @@ export interface RoomServiceDeps {
   /** idle rooms are dropped after this */
   idleMs?: number;
   log?: (msg: string, err?: unknown) => void;
+  /** active supporters get a blue check */
+  isSupporter?: (playerId: string) => boolean;
 }
 
 export class RoomService {
@@ -118,6 +122,14 @@ export class RoomService {
     return this.rooms.get(id);
   }
 
+  /** How a player shows in seats, the crowd and chat: grey check signed in, blue for supporters. */
+  private badges(who: Identity) {
+    if (who.guest) return {};
+    return this.deps.isSupporter?.(who.id) ? { verified: true as const, supporter: true as const } : { verified: true as const };
+  }
+
+  private seatee = (who: Identity) => ({ id: who.id, name: who.name, ...this.badges(who) });
+
   get size() {
     return this.rooms.size;
   }
@@ -130,7 +142,11 @@ export class RoomService {
       watchable: opts.watchable ?? false,
       spectatorsMuted: opts.spectatorsMuted ?? false,
       createdAt: this.now(),
-      game: createGame({ id, timeControl: opts.timeControl, teams: opts.teams }),
+      game: createGame({
+        id,
+        timeControl: opts.timeControl,
+        teams: { w: (opts.teams?.w ?? []).map(this.seatee), b: (opts.teams?.b ?? []).map(this.seatee) },
+      }),
       spectators: new Map(),
       chat: [],
       rematchRoomId: null,
@@ -211,11 +227,11 @@ export class RoomService {
       const w = g.teams.w.length;
       const b = g.teams.b.length;
       const team: Color = w < b ? 'w' : b < w ? 'b' : Math.random() < 0.5 ? 'w' : 'b';
-      const r = joinTeam(g, { id: who.id, name: who.name }, team);
+      const r = joinTeam(g, this.seatee(who), team);
       if (r.ok) room.game = r.state;
-      else (room.spectators.set(who.id, { id: who.id, name: who.name }), (watching = true));
+      else (room.spectators.set(who.id, this.seatee(who)), (watching = true));
     } else {
-      room.spectators.set(who.id, { id: who.id, name: who.name });
+      room.spectators.set(who.id, this.seatee(who));
       watching = true;
     }
     // A spectator arriving only changes the crowd: don't resend the whole room to everyone.
@@ -251,16 +267,16 @@ export class RoomService {
         if (!room.isPrivate) return fail('not-allowed');
         const r = leaveTeam(room.game, who.id);
         if (!r.ok) return r;
-        room.spectators.set(who.id, { id: who.id, name: who.name });
+        room.spectators.set(who.id, this.seatee(who));
         return r;
       }
       // Quick matches have fixed seats: you can only take one whose player left.
       const g = room.game;
       const away = g.teams[team].find((p) => !p.connected);
       const r = room.isPrivate
-        ? joinTeam(g, { id: who.id, name: who.name }, team)
+        ? joinTeam(g, this.seatee(who), team)
         : away
-          ? takeSeat(g, { id: who.id, name: who.name }, away.id)
+          ? takeSeat(g, this.seatee(who), away.id)
           : fail('no-open-seat');
       if (r.ok) room.spectators.delete(who.id);
       return r;
@@ -351,7 +367,7 @@ export class RoomService {
     if (recent.length >= 5) return fail('rate-limited');
     this.chatRate.set(who.id, [...recent, now]);
 
-    const msg: ChatMessage = { id: randomBytes(6).toString('base64url'), userId: who.id, name: who.name, text: clean, at: now };
+    const msg: ChatMessage = { id: randomBytes(6).toString('base64url'), userId: who.id, name: who.name, text: clean, at: now, ...this.badges(who) };
     room.chat = [...room.chat, msg].slice(-MAX_CHAT);
     room.lastActivity = now;
     this.deps.onChat(room, msg);

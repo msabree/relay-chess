@@ -3,6 +3,7 @@ import { applyPatch, type ClientToServerEvents, type RoomSnapshot, type ServerTo
 import { io as connect, type Socket } from 'socket.io-client';
 import { expect } from 'vitest';
 import { createServer } from '../src/app';
+import type { Billing } from '../src/billing';
 import { loadConfig } from '../src/config';
 import { createMemoryStore } from '../src/store/memory';
 
@@ -52,7 +53,7 @@ export const roomOf = (s: Client, roomId: string) => trackers.get(s)!.rooms.get(
 export const gapsOf = (s: Client) => trackers.get(s)!.gaps;
 export const SECRET = 'test-secret-0123456789';
 
-export async function startServer(opts: { abandonMs?: number; lobbyMs?: number } = {}) {
+export async function startServer(opts: { abandonMs?: number; lobbyMs?: number; billing?: Billing | null } = {}) {
   const config = loadConfig({ AUTH_SECRET: SECRET, CORS_ORIGINS: 'http://localhost:3000' });
   const store = createMemoryStore();
   /** last sign-in code emailed to each address */
@@ -97,7 +98,7 @@ export async function startServer(opts: { abandonMs?: number; lobbyMs?: number }
     expect(session).toBeTruthy();
     const r = await api('/account/session', { method: 'POST', token: session, json: { guestToken } });
     expect(r.status).toBe(200);
-    return { session, ...(r.body as { token: string; user: { id: string; username: string; email: string } }) };
+    return { session, ...(r.body as { token: string; user: { id: string; username: string; email: string; needsName?: boolean } }) };
   };
 
   /** A connected player: token, user and socket. */

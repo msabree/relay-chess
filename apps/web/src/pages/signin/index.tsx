@@ -5,10 +5,10 @@ import { useRouter } from 'next/router';
 import NavigationBar from '@/components/NavigationBar';
 import { signInWithCode } from '@/lib/auth';
 
-/** Where the link in the sign-in email lands: signs you in with the code it carries. */
+/** Where the link in the sign-in email lands: signs you in with the code it carries, then shows your profile. */
 export default function SignInPage() {
   const router = useRouter();
-  const [state, setState] = useState<{ status: 'working' | 'done' | 'failed'; name?: string }>({ status: 'working' });
+  const [state, setState] = useState<{ status: 'working' | 'failed' }>({ status: 'working' });
   const tried = useRef(false);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function SignInPage() {
     // Don't leave the code in the address bar or history.
     router.replace('/signin', undefined, { shallow: true });
     signInWithCode(email, code).then(
-      (user) => setState({ status: 'done', name: user.username }),
+      (user) => void router.replace('/'),
       () => setState({ status: 'failed' }),
     );
   }, [router]);
@@ -34,17 +34,6 @@ export default function SignInPage() {
       <NavigationBar />
       <main className="mx-auto max-w-md px-4 py-20 text-center">
         {state.status === 'working' && <p className="text-fg-muted">Signing you in…</p>}
-        {state.status === 'done' && (
-          <>
-            <h1 className="text-2xl font-semibold">You&apos;re signed in</h1>
-            <p className="mt-2 text-fg-muted">
-              Playing as <span className="font-medium text-fg">{state.name}</span>. That name is yours now.
-            </p>
-            <Link href="/" className="mt-6 inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-accent-fg hover:bg-accent/90">
-              Play
-            </Link>
-          </>
-        )}
         {state.status === 'failed' && (
           <>
             <h1 className="text-2xl font-semibold">That link didn&apos;t work</h1>

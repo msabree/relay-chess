@@ -4,6 +4,7 @@ import { ChessGameContext } from '@/contexts/ChessGame';
 import { TIMER_OPTIONS } from '@/constants';
 import { getTimerLabel } from '@/components/TimerSelection';
 import { colorName } from './util';
+import PlayerCheck from '@/components/PlayerCheck';
 
 const MAX_PER_TEAM = 4;
 const TIMERS = ['1,0', '3,2', ...TIMER_OPTIONS.map((t) => t.time)];
@@ -38,6 +39,7 @@ const RoomSetup = () => {
           <li key={p.id} className="flex h-8 items-center gap-2 text-sm">
             <span className="w-4 font-mono text-xs text-fg-subtle">{i + 1}</span>
             <span className={`truncate ${p.id === userId ? 'font-semibold' : ''}`}>{p.name}</span>
+            {p.verified && <PlayerCheck id={p.id} name={p.name} supporter={p.supporter} />}
             {p.id === userId && <span className="shrink-0 rounded bg-accent px-1.5 text-[10px] font-semibold uppercase text-accent-fg">you</span>}
             {!p.connected && <span className="text-xs text-fg-subtle">away</span>}
           </li>

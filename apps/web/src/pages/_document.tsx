@@ -11,6 +11,12 @@ export default function RelayDocument() {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#0E0F11" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#FAF8F2" media="(prefers-color-scheme: light)" />
+        {/* Signed in? Mark <html> before first paint so the guest landing page never flashes. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(JSON.parse(localStorage.getItem('relaychess.player')||'{}').session)document.documentElement.dataset.signedIn=''}catch(e){}`,
+          }}
+        />
       </Head>
       <body>
         <Main />

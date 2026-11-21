@@ -6,8 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { ChessGameProvider } from '@/contexts/ChessGame';
 import NavigationBar from '@/components/NavigationBar';
 import GameScreen from '@/components/game/GameScreen';
-import DeployBanner from '@/components/game/DeployBanner';
-import { useBoardColor } from '@/lib/settings';
+import { useArena, useBoardColor } from '@/lib/settings';
 
 function GamesErrorFallback() {
   return (
@@ -29,6 +28,9 @@ function GamesErrorFallback() {
 const Room = () => {
   const roomId = usePathname()?.split('games/')[1] ?? '';
   const scheme = useBoardColor();
+  // Supporter arena: your own look for the game (only you see it).
+  const arena = useArena();
+  const colors = arena?.board ?? scheme;
 
   return (
     <ErrorBoundary
@@ -42,8 +44,9 @@ const Room = () => {
       </Head>
       <ChessGameProvider roomId={roomId}>
         <NavigationBar compact />
-        <DeployBanner />
-        <GameScreen lightColor={scheme.light} darkColor={scheme.dark} />
+        <div className={arena ? 'min-h-[calc(100dvh-56px)]' : undefined} style={arena ? { backgroundImage: arena.backdrop } : undefined} data-arena={arena?.value}>
+          <GameScreen lightColor={colors.light} darkColor={colors.dark} />
+        </div>
       </ChessGameProvider>
     </ErrorBoundary>
   );

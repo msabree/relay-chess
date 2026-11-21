@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Document } from 'mongodb';
-import type { ContactMessage, GameRecord, Score, Store } from './types';
+import type { AnnouncementDoc, ContactMessage, GameRecord, Score, Store, Supporter } from './types';
 
 const strip = <T extends Document>(d: T | null) => {
   if (!d) return null;
@@ -19,6 +19,10 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   const games: Collection<GameRecord> = db.collection('recent_games');
   const scores: Collection<Score> = db.collection('scores');
   const contact: Collection<ContactMessage> = db.collection('contact-us');
+  const announcements: Collection<AnnouncementDoc> = db.collection('announcements');
+  const retired: Collection<{ _id: string; at: Date }> = db.collection('retired_players');
+  const supporters: Collection<Omit<Supporter, 'playerId'> & { _id: string }> = db.collection('supporters');
+  const retiredNames: Collection<{ _id: string; at: Date }> = db.collection('retired_names');
 
   // Games used to expire after 30 days. Drop that TTL index if an older deploy created it.
   await games.dropIndex('timestamp_1').catch(() => {});
@@ -26,6 +30,7 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
   await Promise.all([
     games.createIndex({ roomId: 1 }, { unique: true }),
     games.createIndex({ timestamp: 1 }),
+    games.createIndex({ userIds: 1, timestamp: -1 }),
     scores.createIndex({ period: 1, key: 1, userId: 1 }, { unique: true }),
     scores.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
@@ -60,8 +65,59 @@ export async function createMongoStore(url: string, dbName: string): Promise<Sto
       const docs = await scores.find({ period, key }).toArray();
       return docs.map((d) => strip(d) as Score);
     },
+    async gamesFor(userIds, limit) {
+      const docs = await games.find({ userIds: { $in: userIds } }, { projection: { gameHistory: { $slice: -1 }, analysis: 0 } }).sort({ timestamp: -1 }).limit(limit).toArray();
+      return docs.map((d) => strip(d) as GameRecord);
+    },
     async saveContact(msg) {
       await contact.insertOne(msg);
+    },
+    async getSupporter(playerId) {
+      const d = await supporters.findOne({ _id: playerId });
+      if (!d) return null;
+      const { _id, ...rest } = d;
+      return { ...rest, playerId: _id };
+    },
+    async saveSupporter(playerId, patch) {
+      const defaults = { customerId: '', subscriptionId: '', plan: null, status: '', until: new Date(0), cancelAtPeriodEnd: false, showOnWall: false };
+      const onInsert = Object.fromEntries(Object.entries(defaults).filter(([k]) => !(k in patch)));
+      await supporters.updateOne({ _id: playerId }, { $set: patch, $setOnInsert: { ...onInsert, since: new Date() } }, { upsert: true });
+    },
+    async listSupporters() {
+      return (await supporters.find({}).toArray()).map(({ _id, ...rest }) => ({ ...rest, playerId: _id }));
+    },
+    async deleteSupporter(playerId) {
+      await supporters.deleteOne({ _id: playerId });
+    },
+    async retirePlayers(ids) {
+      if (!ids.length) return;
+      await retired.bulkWrite(ids.map((id) => ({ updateOne: { filter: { _id: id }, update: { $setOnInsert: { at: new Date() } }, upsert: true } })));
+    },
+    async retiredPlayers() {
+      return (await retired.find({}, { projection: { _id: 1 } }).toArray()).map((d) => d._id);
+    },
+    async retireName(key) {
+      await retiredNames.updateOne({ _id: key }, { $setOnInsert: { at: new Date() } }, { upsert: true });
+    },
+    async retiredNames() {
+      return (await retiredNames.find({}, { projection: { _id: 1 } }).toArray()).map((d) => d._id);
+    },
+    async deleteScores(userIds) {
+      await scores.deleteMany({ userId: { $in: userIds } });
+    },
+    async liveAnnouncements(now) {
+      const docs = await announcements
+        .find({
+          active: true,
+          $and: [
+            { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
+            { $or: [{ endsAt: { $exists: false } }, { endsAt: null }, { endsAt: { $gt: now } }] },
+          ],
+        })
+        .sort({ order: 1, _id: 1 })
+        .limit(5)
+        .toArray();
+      return docs.map(({ _id, ...d }) => ({ ...d, id: String(_id) }));
     },
     async close() {
       await client.close();

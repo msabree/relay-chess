@@ -5,6 +5,8 @@ import { QueryClientProvider } from 'react-query';
 import { Analytics } from '@vercel/analytics/next';
 import { AppProvider } from '@/contexts/App';
 import { Toaster } from '@/components/ui/toaster';
+import AnnouncementBar from '@/components/AnnouncementBar';
+import PickUsername from '@/components/PickUsername';
 import { queryClient } from '@/lib/queryClient';
 import type { AppProps } from 'next/app';
 
@@ -23,7 +25,9 @@ function RelayApp({ Component, pageProps }: AppProps) {
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <div className={`${sans.variable} ${mono.variable} font-sans min-h-screen bg-bg text-fg`}>
+            <AnnouncementBar />
             <Component {...pageProps} />
+            <PickUsername />
             <Toaster />
             <Analytics />
           </div>

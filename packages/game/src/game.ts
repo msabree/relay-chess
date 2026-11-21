@@ -7,6 +7,7 @@ import type {
   Player,
   PlayedMove,
   Result,
+  Seatee,
   TimeControl,
 } from './types';
 
@@ -27,9 +28,9 @@ export function createGame(opts: {
   id: string;
   timeControl?: TimeControl | null;
   maxPerTeam?: number;
-  teams?: Partial<Record<Color, { id: string; name: string }[]>>;
+  teams?: Partial<Record<Color, Seatee[]>>;
 }): GameState {
-  const seat = (p: { id: string; name: string }): Player => ({ id: p.id, name: p.name, connected: true });
+  const seat = (p: Seatee): Player => ({ id: p.id, name: p.name, connected: true, ...(p.verified ? { verified: true } : {}), ...(p.supporter ? { supporter: true } : {}) });
   return {
     id: opts.id,
     maxPerTeam: opts.maxPerTeam ?? DEFAULT_MAX_PER_TEAM,
@@ -74,13 +75,13 @@ export function nextMover(state: GameState, color: Color = turn(state)): Player 
 }
 
 /** Take (or switch to) a seat on a team. Only before the first move. */
-export function join(state: GameState, player: { id: string; name: string }, color: Color): Outcome {
+export function join(state: GameState, player: Seatee, color: Color): Outcome {
   if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
   if (colorOf(state, player.id) === color) return ok(state);
   if (state.teams[color].length >= state.maxPerTeam) return { ok: false, error: 'team-full' };
   const s = clone(state);
   s.teams[other(color)] = s.teams[other(color)].filter((p) => p.id !== player.id);
-  s.teams[color].push({ id: player.id, name: player.name, connected: true });
+  s.teams[color].push({ id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}), ...(player.supporter ? { supporter: true } : {}) });
   return ok(s);
 }
 
@@ -89,7 +90,7 @@ export function join(state: GameState, player: { id: string; name: string }, col
  * gets the same spot in the relay order. Used when someone comes back from a
  * different browser (a new identity) or a stranger fills an abandoned seat.
  */
-export function takeSeat(state: GameState, player: { id: string; name: string }, seatOf: string): Outcome {
+export function takeSeat(state: GameState, player: Seatee, seatOf: string): Outcome {
   if (state.status !== 'waiting') return { ok: false, error: 'not-waiting' };
   if (colorOf(state, player.id)) return { ok: false, error: 'seat-taken' };
   const s = clone(state);
@@ -97,7 +98,7 @@ export function takeSeat(state: GameState, player: { id: string; name: string },
     const i = s.teams[c].findIndex((p) => p.id === seatOf);
     if (i < 0) continue;
     if (s.teams[c][i]!.connected) return { ok: false, error: 'seat-taken' };
-    s.teams[c][i] = { id: player.id, name: player.name, connected: true };
+    s.teams[c][i] = { id: player.id, name: player.name, connected: true, ...(player.verified ? { verified: true } : {}), ...(player.supporter ? { supporter: true } : {}) };
     return ok(s);
   }
   return { ok: false, error: 'not-seated' };

@@ -2,3 +2,5 @@ export * from './types';
 export * from './game';
 export * from './protocol';
 export * from './contact';
+export * from './announcements';
+export * from './names';

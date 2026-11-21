@@ -1,3 +1,4 @@
+import { AnnouncementBar } from '@/components/AnnouncementBar';
 import { Avatar } from '@/components/ui/Avatar';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Logo } from '@/components/ui/Logo';
@@ -7,39 +8,42 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-/** One header for every screen, like web: brand, your player name, menu. */
+/** One header for every screen, like web: brand, your player name, menu, then any site banners. */
 export function AppHeader() {
   const { c } = useTheme();
   const user = useUser();
 
   return (
-    <View style={[styles.bar, { borderBottomColor: c.line, backgroundColor: c.bg }]}>
-      <Pressable accessibilityRole="link" accessibilityLabel="Relay Chess home" onPress={() => router.dismissTo('/')}>
-        <Logo height={20} />
-      </Pressable>
-      <View style={styles.right}>
-        {user.data && (
+    <View>
+      <View style={[styles.bar, { borderBottomColor: c.line, backgroundColor: c.bg }]}>
+        <Pressable accessibilityRole="link" accessibilityLabel="Relay Chess home" onPress={() => router.dismissTo('/')}>
+          <Logo height={20} />
+        </Pressable>
+        <View style={styles.right}>
+          {user.data && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Playing as ${user.data.username}. Change name and settings`}
+              onPress={() => router.push('/settings')}
+              style={({ pressed }) => [styles.me, pressed && { backgroundColor: c.raised }]}
+            >
+              <Avatar name={user.data.username} size={28} />
+              <Text numberOfLines={1} style={[styles.name, { color: c.fg }]}>
+                {user.data.username}
+              </Text>
+            </Pressable>
+          )}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Playing as ${user.data.username}. Change name and settings`}
-            onPress={() => router.push('/settings')}
-            style={({ pressed }) => [styles.me, pressed && { backgroundColor: c.raised }]}
+            accessibilityLabel="Menu"
+            onPress={() => router.push('/modals/menu')}
+            style={({ pressed }) => [styles.icon, pressed && { backgroundColor: c.raised }]}
           >
-            <Avatar name={user.data.username} size={28} />
-            <Text numberOfLines={1} style={[styles.name, { color: c.fg }]}>
-              {user.data.username}
-            </Text>
+            <IconSymbol name="line.3.horizontal" size={22} color={c.fgMuted} />
           </Pressable>
-        )}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Menu"
-          onPress={() => router.push('/modals/menu')}
-          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: c.raised }]}
-        >
-          <IconSymbol name="line.3.horizontal" size={22} color={c.fgMuted} />
-        </Pressable>
+        </View>
       </View>
+      <AnnouncementBar />
     </View>
   );
 }

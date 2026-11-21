@@ -52,6 +52,40 @@ export interface ContactMessage {
   sentAt: Date;
 }
 
+/** A supporter membership (Stripe subscription), keyed by the account's player id. */
+export interface Supporter {
+  playerId: string;
+  customerId: string;
+  subscriptionId: string;
+  plan: 'monthly' | 'yearly' | null;
+  /** Stripe's subscription status */
+  status: string;
+  /** perks show until this time */
+  until: Date;
+  cancelAtPeriodEnd: boolean;
+  /** on the public supporters list (opt-in) */
+  showOnWall: boolean;
+  since: Date;
+}
+
+/**
+ * A banner document, as you'd write it in the `announcements` collection:
+ *   { text: "We're live on Product Hunt", link: "https://...", linkText: "Upvote us",
+ *     tone: "info", active: true, startsAt: ISODate(...), endsAt: ISODate(...), order: 0 }
+ * Only text and active are required. Live = active and inside startsAt/endsAt (when set).
+ */
+export interface AnnouncementDoc {
+  text: string;
+  link?: string;
+  linkText?: string;
+  tone?: 'info' | 'warning';
+  active: boolean;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+  /** lower shows first */
+  order?: number;
+}
+
 export interface Store {
   readonly kind: 'memory' | 'mongo';
   /** The Mongo database, when there is one. Accounts live in it too. */
@@ -69,5 +103,27 @@ export interface Store {
   listScores(period: Period, key: string): Promise<Score[]>;
 
   saveContact(msg: ContactMessage): Promise<void>;
+  /** Supporter memberships, one per player. */
+  getSupporter(playerId: string): Promise<Supporter | null>;
+  /** Create or update; `since` is set on first save only. */
+  saveSupporter(playerId: string, patch: Partial<Omit<Supporter, 'playerId' | 'since'>>): Promise<void>;
+  listSupporters(): Promise<Supporter[]>;
+  deleteSupporter(playerId: string): Promise<void>;
+  /** Newest finished games any of these players were in. */
+  gamesFor(userIds: string[], limit: number): Promise<GameRecord[]>;
+  /** Live banners right now, in order. */
+  liveAnnouncements(now: Date): Promise<(AnnouncementDoc & { id: string })[]>;
+
+  /**
+   * Player ids of deleted accounts. Their games stay (for the totals), but
+   * their tokens stop working and their profile is gone for good.
+   */
+  retirePlayers(ids: string[]): Promise<void>;
+  retiredPlayers(): Promise<string[]>;
+  /** Usernames of deleted accounts (lower case): nobody can take them again. */
+  retireName(key: string): Promise<void>;
+  retiredNames(): Promise<string[]>;
+  /** Take these players off the leaderboards. */
+  deleteScores(userIds: string[]): Promise<void>;
   close(): Promise<void>;
 }

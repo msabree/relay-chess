@@ -4,23 +4,32 @@ import { useRouter } from 'next/router';
 import { AppContext } from '@/contexts/App';
 import { useUser } from '@/hooks/useUser';
 import Logo from '@/icons/Logo';
-import ThemeToggle from '@/components/ThemeToggle';
 import SettingsDrawer from '@/components/RightDrawer';
 import { initials } from '@/components/game/util';
+import AccountMenu from '@/components/AccountMenu';
 
-/** One header for every page: brand, a few links, theme toggle, your player name. */
+/**
+ * One header for every page. Guests get the full set of links; signed-in
+ * players get a lean bar with Play and an account menu.
+ */
 const NavigationBar = ({ compact = false }: { compact?: boolean }) => {
   const { setRightDrawerOpen } = useContext(AppContext);
   const user = useUser();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const links = [
-    { href: '/', label: 'Play' },
-    { href: '/live-games', label: 'Watch' },
-    { href: '/leaderboard', label: 'Leaderboard' },
-    { href: '/how-to-play', label: 'How to play' },
-  ];
+  const signedIn = !!user.data?.verified;
+  const links = signedIn
+    ? [
+        { href: '/live-games', label: 'Watch' },
+        { href: '/leaderboard', label: 'Leaderboard' },
+      ]
+    : [
+        { href: '/', label: 'Play' },
+        { href: '/live-games', label: 'Watch' },
+        { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/how-to-play', label: 'How to play' },
+      ];
   const linkClass = (href: string) =>
     `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
       router.pathname === href ? 'text-fg bg-fg/[0.06]' : 'text-fg-muted hover:text-fg hover:bg-fg/5'
@@ -44,8 +53,13 @@ const NavigationBar = ({ compact = false }: { compact?: boolean }) => {
           </div>
 
           <div className="flex items-center gap-1">
-            <ThemeToggle />
-            {user.data && (
+            {signedIn && router.pathname !== '/' && (
+              <Link href="/#play" className="mr-1 hidden h-9 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent/90 sm:inline-flex">
+                Play
+              </Link>
+            )}
+            {signedIn && user.data && <AccountMenu id={user.data._id} name={user.data.username} />}
+            {!signedIn && user.data && (
               <button
                 type="button"
                 onClick={() => setRightDrawerOpen(true)}
@@ -73,7 +87,7 @@ const NavigationBar = ({ compact = false }: { compact?: boolean }) => {
         </div>
         {menuOpen && (
           <nav aria-label="Main" className="md:hidden border-t border-line px-4 py-2 flex flex-col">
-            {links.map((l) => (
+            {(signedIn ? [{ href: '/', label: 'Play' }, ...links] : links).map((l) => (
               <Link key={l.label} href={l.href} className={`${linkClass(l.href)} py-3`} onClick={() => setMenuOpen(false)}>
                 {l.label}
               </Link>

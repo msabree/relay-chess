@@ -11,6 +11,7 @@ const Footer = (_props: { variant?: 'dark' | 'light' }) => (
       </div>
       <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
         <a href={REPO_URL} className="text-fg-muted hover:text-fg">GitHub</a>
+        <Link href="/how-to-play" className="text-fg-muted hover:text-fg">How to play</Link>
         <Link href="/about" className="text-fg-muted hover:text-fg">About</Link>
         <Link href="/about#contact" className="text-fg-muted hover:text-fg">Contact</Link>
         <Link href="/terms-of-service" className="text-fg-muted hover:text-fg">Terms</Link>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useLeaderboard, useUserPosition } from '@/hooks/useLeaderboard';
 import { useUser } from '@/hooks/useUser';
+import Link from 'next/link';
+import VerifiedMark from '@/components/VerifiedMark';
 
 type Period = 'daily' | 'weekly';
 const PAGE_SIZE = 25;
@@ -102,9 +104,14 @@ const Leaderboard = (_props: { showHeader?: boolean; showPagination?: boolean })
                 return (
                   <tr key={r.userId} className={`border-t border-line ${isMe ? 'bg-accent/10' : ''}`}>
                     <td className="px-4 py-3 font-mono text-fg-muted">{r._rank}</td>
-                    <td className="px-2 py-3 font-medium">
-                      {r.username}
-                      {isMe && <span className="ml-2 rounded bg-accent px-1.5 text-[10px] font-semibold uppercase text-accent-fg">you</span>}
+                    <td className="px-2 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/players/${r.userId}`} className="font-medium underline-offset-4 hover:underline">
+                          {r.username}
+                        </Link>
+                        {r.verified && <VerifiedMark supporter={r.supporter} />}
+                        {isMe && <span className="ml-1 rounded bg-accent px-1.5 text-[10px] font-semibold uppercase text-accent-fg">you</span>}
+                      </div>
                     </td>
                     <td className="px-2 py-3 text-right font-mono font-semibold">{r.wins}</td>
                     <td className="px-2 py-3 text-right font-mono text-fg-muted">{r.losses}</td>
