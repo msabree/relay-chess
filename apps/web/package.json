@@ -17,7 +17,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-toast": "^1.2.14",
     "@relay-chess/game": "workspace:*",
-    "@types/node": "22.15.24",
+    "@types/node": "22.20.5",
     "@types/randomstring": "^1.1.12",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.21.1",
